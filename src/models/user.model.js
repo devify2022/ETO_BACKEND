@@ -4,71 +4,35 @@ import bcrypt from "bcrypt";
 
 const usersSchema = new Schema(
   {
-    username: {
+    phone: {
       type: String,
-      required: true,
+      required: [true, 'Phone number is required'],
       unique: true,
-      lowercase: true,
-      trim: true,
-      index: true,
     },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
+    otp: {
+      type: Number,
+      required: [true, 'OTP is required'],
     },
-    fullName: {
-      type: String,
-      required: true,
-      trim: true,
-      index: true,
+    isVerified: {
+      type: Boolean,
+      required: [true, 'Verification status is required'],
     },
-    avatar: {
-      type: String, //cloudinary url
-      required: true,
+    isDriver: {
+      type: Boolean,
+      required: [true, 'Driver status is required'],
     },
-    coverImage: {
-      type: String, //cloudinary url
-    },
-    watchHistory: [
-      {
-        type: Schema.ObjectId,
-        ref: "Video",
-      },
-    ],
-    password: {
-      type: String,
-      required: [true, "Password is required"],
-    },
-    refreshToken: {
-      type: String,
+    isAdmin: {
+      type: Boolean,
+      required: [true, 'Admin status is required'],
     },
   },
   { timestamps: true }
 );
 
-usersSchema.pre("save", async function (next) {
-  if (this.isModified("password")) {
-    this.password = await bcrypt.hash(this.password, 10);
-    next();
-  } else {
-    next();
-  }
-});
-
-usersSchema.methods.isPasswordCorrect = async function (password) {
-  return await bcrypt.compare(password, this.password);
-};
-
 usersSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     {
       _id: this._id,
-      email: this.email,
-      username: this.username,
-      fullName: this.fullName,
     },
     process.env.ACCESS_TOKEN_SECRET,
     {
@@ -88,4 +52,5 @@ usersSchema.methods.generateRefreshToken = function () {
     }
   );
 };
+
 export const User = mongoose.model("User", usersSchema);

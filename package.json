@@ -1,7 +1,7 @@
 {
-  "name": "chai-backend",
+  "name": "eto-backend",
   "version": "1.0.0",
-  "description": "a backend basic project",
+  "description": "TOTO booking system",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "bson": "^6.8.0",
     "cloudinary": "^1.41.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",

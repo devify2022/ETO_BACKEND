@@ -1,8 +1,11 @@
+import { ObjectId } from "bson";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { User } from "../models/user.model.js";
 import jwt from "jsonwebtoken";
+// import generateOtp from "./../utils/otpGenerate";
+import { Rider } from "../models/rider.model.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -18,89 +21,88 @@ const generateAccessAndRefreshToken = async (userId) => {
   }
 };
 
-const registerUser = asyncHandler(async (req, res) => {
-  const { fullName, email, username, password } = req.body;
-  if (
-    [fullName, email, username, password].some((elem) => elem?.trim() === "")
-  ) {
-    throw new ApiError(400, "All fields are required");
-  }
-
-  const existedUser = await User.findOne({
-    $or: [{ email }, { username }],
-  });
-  if (existedUser) {
-    throw new ApiError(409, "User with email or username exist");
-  }
-
-
-  const user = await User.create({
-    fullName,
-    email,
-    password,
-    username: username.toLowerCase(),
-  });
-
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken "
-  );
-
-  if (!createdUser) {
-    throw new ApiError(
-      500,
-      "Something went wrong while registering user in DB"
-    );
-  }
-  return res
-    .status(201)
-    .json(new ApiResponse(200, createdUser, "User registered successfully"));
-});
-
 const loginUser = asyncHandler(async (req, res) => {
-  const { email, password, username } = req.body;
+  const { _id, phone, otp, isVerified, isDriver, isAdmin } = req.body;
 
-  if (!username && !email) {
-    throw new ApiError(400, "Username or Email is required");
-  }
-
-  const user = await User.findOne({
-    $or: [{ email }, { username }],
-  });
-  if (!user) {
-    throw new ApiError(400, "user is not registered");
-  }
-  const isPasswordValid = await user.isPasswordCorrect(password);
-  if (!isPasswordValid) {
-    throw new ApiError(401, "Invalid user credentials");
-  }
-  // console.log({ user });
-  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-    user._id
-  );
-  const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
-
-  const options = {
-    httpOnly: true,
-    secure: true,
+  const generateOtp = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
   };
 
-  return res
-    .status(200)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
-    .json(
-      new ApiResponse(
-        "200",
-        {
-          user: loggedInUser,
-          accessToken,
-          refreshToken,
-        },
-        "User log in"
-      )
-    );
+  if (!phone) {
+    throw new ApiError(400, "Phone number is required");
+  }
+
+  if (phone) {
+    const newOtp = generateOtp();
+    const user = await User.findOne({ phone });
+    if (!user) {
+      new User({
+        phone,
+        otp: newOtp,
+        isVerified: false,
+        isDriver,
+        isAdmin,
+      });
+      await user.save();
+    } else {
+      await User.findOneAndUpdate({
+        phone,
+        otp: newOtp,
+        isVerified: false,
+        isDriver,
+        isAdmin,
+      });
+    }
+    if (!isDriver && !isAdmin) {
+      const rider = Rider.findOne({ userId: ObjectId(_id) });
+      if (!rider) {
+        const newRider = new Rider({
+          phone,
+          userId: ObjectId(_id),
+          name: "rider",
+        });
+        await newRider.save();
+      }
+
+      if (!rider.name || rider.name.trim() === "") {
+        await Rider.findOneAndUpdate(
+          { phone, name: "rider" },
+          {
+            set: true,
+          }
+        );
+      }
+    }
+    return res
+      .status(200)
+      .json(new ApiResponse(200, otp, "OTP sent successfully"));
+  }
+
+  // let user = await User.findOne({ phone });
+
+  // if (!user) {
+  //   user = new User({
+  //     phone,
+  //     isVerified: false,
+  //     isDriver: false,
+  //     isAdmin: false,
+  //   });
+  //   await user.save();
+  // } else {
+  //   if (!user.isDriver && !user.isAdmin) {
+  //     const isRider = await Rider.findOne({
+  //       userId: ObjectId(_id),
+  //       name: { $exists: true, $ne: "", $type: "string" },
+  //     });
+
+  //     if (!isRider) {
+  //       const rider = new Rider({ userId: ObjectId(_id), name: "rider" });
+  //       await rider.save();
+  //     }
+  //   }
+  // }
+
+  // const generatedOtp = generateOtp();
 });
 
 const logoutUser = asyncHandler(async (req, res) => {
@@ -192,12 +194,4 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     .json(new ApiResponse("200", {}, "Password changed successfully"));
 });
 
-
-
-export {
-  registerUser,
-  loginUser,
-  logoutUser,
-  refreshAccessToken,
-  changeCurrentPassword,
-};
+export { loginUser, logoutUser, refreshAccessToken, changeCurrentPassword };
