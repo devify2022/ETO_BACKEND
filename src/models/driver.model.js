@@ -99,6 +99,7 @@ const driverSchema = new Schema(
     type:String,
   },
   total_complete_rides:{
+     type:Number,
     default:0,
   },
   is_on_ride:{
