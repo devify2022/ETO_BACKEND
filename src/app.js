@@ -1,38 +1,30 @@
-import express from 'express';
-import cors from 'cors';
-import http from 'http-status-codes';
-// import routes from './app/routes/routes';
-// import globalErrorHandler from './app/middlewares/globalErrorHandler';
-// import hello from './app/routes/test';
+import express from "express";
+import cors from "cors";
 
 const app = express();
 
-app.use(cors());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN,
+    credentials: true,
+  })
+);
 
-// Global error handler
-// app.use(globalErrorHandler);
-// app.use(hello);
+app.use(
+  express.json({
+    limit: "16kb",
+  })
+);
 
-app.get('/', (req, res) => {
-  res.send('SERVER RUNNING');
-});
+app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+app.use(express.static("public"));
 
-// app.use('/eto/api', routes);
+// routes import
+import userRouter from "./routes/user.routes.js";
 
-// Wrong API error handler
-app.use((req, res) => {
-  res.status(http.NOT_FOUND).json({
-    success: false,
-    message: 'Not Found',
-    errorMessages: [
-      {
-        path: req.originalUrl,
-        message: 'API Not Found',
-      },
-    ],
-  });
-});
+// routes declaration
 
-export default app;
+app.use("/api/v1/users", userRouter);
+
+export { app };
+// https://localhost:8000/api/v1/users/register
