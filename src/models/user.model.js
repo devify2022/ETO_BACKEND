@@ -25,6 +25,9 @@ const usersSchema = new Schema(
       type: Boolean,
       required: [true, 'Admin status is required'],
     },
+    refreshToken: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

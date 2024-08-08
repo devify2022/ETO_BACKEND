@@ -23,8 +23,7 @@ app.use(express.static("public"));
 import userRouter from "./routes/user.routes.js";
 
 // routes declaration
-
-app.use("/eto/api/auth", userRouter);
+app.use("/eto/api/v1/auth", userRouter);
 
 export { app };
 // https://localhost:8000/api/v1/users/register
