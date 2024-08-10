@@ -1,29 +1,30 @@
 import mongoose, { Schema } from "mongoose";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
 
 const usersSchema = new Schema(
   {
     phone: {
       type: String,
-      required: [true, 'Phone number is required'],
+      required: [true, "Phone number is required"],
       unique: true,
     },
     otp: {
       type: Number,
-      required: [true, 'OTP is required'],
+      // required: [true, 'OTP is required'],
     },
     isVerified: {
       type: Boolean,
-      required: [true, 'Verification status is required'],
+      // required: [true, 'Verification status is required'],
+      default: false,
     },
     isDriver: {
       type: Boolean,
-      required: [true, 'Driver status is required'],
+      required: [true, "Driver status is required"],
     },
     isAdmin: {
       type: Boolean,
-      required: [true, 'Admin status is required'],
+      // required: [true, 'Admin status is required'],
+      default: false,
     },
     refreshToken: {
       type: String,
@@ -36,6 +37,7 @@ usersSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     {
       _id: this._id,
+      isDriver: this.isDriver,
     },
     process.env.ACCESS_TOKEN_SECRET,
     {
@@ -48,6 +50,7 @@ usersSchema.methods.generateRefreshToken = function () {
   return jwt.sign(
     {
       _id: this._id,
+      isDriver: this.isDriver,
     },
     process.env.REFRESH_TOKEN_SECRET,
     {

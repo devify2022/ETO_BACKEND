@@ -16,27 +16,27 @@ const riderSchema = new Schema(
     },
     is_on_ride: {
       type: Boolean,
-      default: false
+      default: false,
     },
     photo: {
       type: String,
-      default: ''
+      default: "",
     },
     total_numbers_of_rides: {
       type: Number,
-      default: 0
+      default: 0,
     },
     ride_lds: {
       type: Array,
-      default: []
+      default: [],
     },
     current_location: {
       type: String,
-      default: ''
+      default: "",
     },
     current_ride_id: {
       type: String,
-      default: ''
+      default: "",
     },
   },
   { timestamps: true }

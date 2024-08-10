@@ -21,9 +21,17 @@ app.use(express.static("public"));
 
 // routes import
 import userRouter from "./routes/user.routes.js";
+import driverRouter from "./routes/driver.routes.js";
+import riderRouter from "./routes/rider.routes.js";
+import rideDetailsRouter from "./routes/ride.routes.js";
+import etoRouter from "./routes/eto.routes.js";
 
 // routes declaration
 app.use("/eto/api/v1/auth", userRouter);
+app.use("/eto/api/v1/driver", driverRouter);
+app.use("/eto/api/v1/rider", riderRouter);
+app.use("/eto/api/v1/rides", rideDetailsRouter);
+app.use("/eto/api/v1/eto", etoRouter);
 
 export { app };
 // https://localhost:8000/api/v1/users/register

@@ -48,11 +48,18 @@ const loginUser = asyncHandler(async (req, res) => {
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
       user._id
     );
+    const newOtp = generateOtp();
+
+    user.otp = newOtp;
+    user.isVerified = false;
+    await user.save();
+
     const data = {
       role,
       accessToken,
       refreshToken,
       userDetails: userDetails || {},
+      otp: newOtp,
     };
     return res
       .status(200)
