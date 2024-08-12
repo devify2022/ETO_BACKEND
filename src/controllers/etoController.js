@@ -1,13 +1,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ETOCard } from "../models/eto.model.js";
 
-
 export const getETOCardById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
-    // const etoCard = await ETOCard.findById(id).populate("driverId") FOR GETTING ALL DETAILS
-    const etoCard = await ETOCard.findById(id);
+    const etoCard = await ETOCard.findOne({ driverId: id });
 
     if (!etoCard) {
       return res.status(404).json({ message: "ETOCard not found" });

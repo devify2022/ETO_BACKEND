@@ -6,6 +6,8 @@ import { Rider } from "../models/rider.model.js";
 export const createNewRide = asyncHandler(async (req, res) => {
   const { driverId, riderId, pickup_location, drop_location } = req.body;
 
+  console.log("hello")
+
   if (!driverId || !riderId || !pickup_location || !drop_location) {
     return res.status(400).json({ message: "Required fields are missing" });
   }

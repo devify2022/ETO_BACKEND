@@ -1,8 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Rider } from "../models/rider.model.js";
 import { RideDetails } from "../models/rideDetails.model.js";
-import generateOtp from "../utils/otpGenerate.js";
-import { User } from "../models/user.model.js";
 
 export const getAllRriders = asyncHandler(async (req, res) => {
   try {

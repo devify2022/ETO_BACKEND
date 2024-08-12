@@ -110,7 +110,7 @@ export const getDriverRideById = asyncHandler(async (req, res) => {
   try {
     const driver = await RideDetails.find({ driverId: id });
 
-    if (!driver) {
+    if (!driver || driver.length === 0) {
       return res.status(404).json({ message: "Driver not found" });
     }
 
