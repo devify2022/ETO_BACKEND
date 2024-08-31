@@ -86,11 +86,11 @@ const driverSchema = new Schema({
   },
   driver_photo: {
     type: String, //url
-    required: [true, "Driver photo is required"],
+    // required: [true, "Driver photo is required"],
   },
   car_photo: {
     type: [String],
-    required: [true, "Car photo is required"],
+    // required: [true, "Car photo is required"],
   },
   lisense_number: {
     type: String,
@@ -105,11 +105,11 @@ const driverSchema = new Schema({
   ],
   aadhar_front_photo: {
     type: String,
-    required: [true, "Aadhar front photo is required"],
+    // required: [true, "Aadhar front photo is required"],
   },
   aadhar_back_photo: {
     type: String,
-    required: [true, "Aadhar back photo is required"],
+    // required: [true, "Aadhar back photo is required"],
   },
   current_location: {
     type: [Number],

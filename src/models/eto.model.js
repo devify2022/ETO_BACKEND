@@ -39,7 +39,7 @@ const ETOCardSchema = new Schema({
     car_photo: [
       {
         type: String,
-        required: true,
+        // required: true,
       },
     ],
   },
