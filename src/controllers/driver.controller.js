@@ -3,12 +3,15 @@ import { Driver } from "../models/driver.model.js";
 import { User } from "../models/user.model.js";
 import { RideDetails } from "../models/rideDetails.model.js";
 import { ETOCard } from "../models/eto.model.js";
+import { ApiError } from "../utils/apiError.js";
+import { ApiResponse } from "../utils/apiResponse.js";
 
+// Create Driver Function
 export const createDriver = asyncHandler(async (req, res) => {
   const { phone } = req.body;
 
   if (!phone) {
-    return res.status(400).json({ message: "Phone number is required" });
+    throw new ApiError(400, "Phone number is required");
   }
 
   try {
@@ -17,7 +20,9 @@ export const createDriver = asyncHandler(async (req, res) => {
 
     if (existsUser && existsUser.isDriver) {
       if (existsDriver) {
-        return res.status(200).json({ message: "Driver already exists" });
+        return res
+          .status(200)
+          .json(new ApiResponse(200, null, "Driver already exists"));
       } else {
         const driverData = { ...req.body, userId: existsUser._id };
         const newDriver = new Driver(driverData);
@@ -45,90 +50,96 @@ export const createDriver = asyncHandler(async (req, res) => {
         const newETOCard = new ETOCard(etoCardData);
         const savedETOCard = await newETOCard.save();
 
-        return res.status(201).json({
-          message: "Driver and ETOCard created successfully",
-          driver: savedDriver,
-          etoCard: savedETOCard,
-        });
+        return res
+          .status(201)
+          .json(
+            new ApiResponse(
+              201,
+              { driver: savedDriver, etoCard: savedETOCard },
+              "Driver and ETOCard created successfully"
+            )
+          );
       }
     } else {
-      return res.status(400).json({
-        message: "User does not exist or is not marked as a driver",
-      });
+      throw new ApiError(
+        400,
+        "User does not exist or is not marked as a driver"
+      );
     }
   } catch (error) {
     console.error("Error creating driver:", error.message);
-    return res.status(500).json({ message: "Failed to create driver" });
+    throw new ApiError(500, "Failed to create driver");
   }
 });
 
+// Get All Drivers Function
 export const getAllDrivers = asyncHandler(async (req, res) => {
   try {
-    const drivers = await Driver.find(); // Fetch all drivers from the database
+    const drivers = await Driver.find();
 
-    return res.status(200).json({
-      message: "Drivers retrieved successfully",
-      drivers,
-    });
+    return res
+      .status(200)
+      .json(new ApiResponse(200, drivers, "Drivers retrieved successfully"));
   } catch (error) {
     console.error("Error retrieving drivers:", error.message);
-    return res.status(500).json({ message: "Failed to retrieve drivers" });
+    throw new ApiError(500, "Failed to retrieve drivers");
   }
 });
 
+// Get Driver by ID Function
 export const getDriverById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!id) {
-    return res.status(400).json({ message: "Driver ID is required" });
+    throw new ApiError(400, "Driver ID is required");
   }
 
   try {
     const driver = await Driver.findById(id);
 
     if (!driver) {
-      return res.status(404).json({ message: "Driver not found" });
+      throw new ApiError(404, "Driver not found");
     }
 
-    return res.status(200).json({
-      message: "Driver retrieved successfully",
-      driver,
-    });
+    return res
+      .status(200)
+      .json(new ApiResponse(200, driver, "Driver retrieved successfully"));
   } catch (error) {
     console.error("Error retrieving driver:", error.message);
-    return res.status(500).json({ message: "Failed to retrieve driver" });
+    throw new ApiError(500, "Failed to retrieve driver");
   }
 });
 
+// Get Driver Ride by ID Function
 export const getDriverRideById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!id) {
-    return res.status(400).json({ message: "Driver ID is required" });
+    throw new ApiError(400, "Driver ID is required");
   }
 
   try {
-    const driver = await RideDetails.find({ driverId: id });
+    const rides = await RideDetails.find({ driverId: id });
 
-    if (!driver || driver.length === 0) {
-      return res.status(404).json({ message: "Driver not found" });
+    if (!rides || rides.length === 0) {
+      throw new ApiError(404, "Driver not found");
     }
 
-    return res.status(200).json({
-      message: "Driver retrieved successfully",
-      driver,
-    });
+    return res
+      .status(200)
+      .json(new ApiResponse(200, rides, "Driver rides retrieved successfully"));
   } catch (error) {
-    console.error("Error retrieving driver:", error.message);
-    return res.status(500).json({ message: "Failed to retrieve driver" });
+    console.error("Error retrieving driver rides:", error.message);
+    throw new ApiError(500, "Failed to retrieve driver rides");
   }
 });
 
+// Update Driver Profile Function
 export const updateDriverProfile = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!id) {
-    return res.status(400).json({ message: "Driver ID is required" });
+    throw new ApiError(400, "Driver ID is required");
   }
 
   delete req.body.phone;
@@ -137,16 +148,16 @@ export const updateDriverProfile = asyncHandler(async (req, res) => {
     const driver = await Driver.findByIdAndUpdate(id, req.body, { new: true });
 
     if (!driver) {
-      return res.status(404).json({ message: "Driver not found" });
+      throw new ApiError(404, "Driver not found");
     }
 
-    return res.status(200).json({
-      message: "Driver profile updated successfully",
-      driver,
-    });
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, driver, "Driver profile updated successfully")
+      );
   } catch (error) {
     console.error("Error updating driver profile:", error.message);
-    console.error(error);
-    return res.status(500).json({ message: "Failed to update driver profile" });
+    throw new ApiError(500, "Failed to update driver profile");
   }
 });

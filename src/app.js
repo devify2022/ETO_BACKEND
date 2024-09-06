@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import errorHandler from "./middlewares/errorMiddleware.js";
 
 const app = express();
 
@@ -32,6 +33,13 @@ app.use("/eto/api/v1/driver", driverRouter);
 app.use("/eto/api/v1/rider", riderRouter);
 app.use("/eto/api/v1/rides", rideDetailsRouter);
 app.use("/eto/api/v1/eto", etoRouter);
+
+app.get("/", (req, res) => {
+  res.send("Welcome to Good Luck API!");
+});
+
+// Error handling middleware
+app.use(errorHandler);
 
 export { app };
 // https://localhost:8000/api/v1/users/register
