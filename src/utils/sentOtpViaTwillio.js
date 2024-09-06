@@ -1,5 +1,8 @@
-import twilio from "twilio";
-import { ApiError } from "./apiError.js";
+import twilio from 'twilio';
+import dotenv from 'dotenv';
+import { ApiError } from './apiError.js';
+
+dotenv.config();
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -9,9 +12,9 @@ const client = twilio(accountSid, authToken);
 export const testSendSms = async () => {
   try {
     const message = await client.messages.create({
-      body: "Hello from Twilio!",
+      body: 'Hello from Twilio!',
       from: process.env.TWILIO_PHONE_NUMBER,
-      to: "+917872358979", // Use a valid phone number in E.164 format
+      to: '+917872358979', // Use a valid phone number in E.164 format
     });
     console.log(`Test SMS sent successfully with SID: ${message.sid}`);
   } catch (error) {
@@ -33,3 +36,5 @@ export const sendOtpViaTwilio = async (phone, otp) => {
     throw new ApiError(500, "Failed to send OTP");
   }
 };
+
+
