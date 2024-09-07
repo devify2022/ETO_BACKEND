@@ -35,7 +35,7 @@ app.use("/eto/api/v1/rides", rideDetailsRouter);
 app.use("/eto/api/v1/eto", etoRouter);
 
 app.get("/", (req, res) => {
-  res.send("Welcome to Good Luck API!");
+  res.send("Welcome to ETO API!");
 });
 
 // Error handling middleware

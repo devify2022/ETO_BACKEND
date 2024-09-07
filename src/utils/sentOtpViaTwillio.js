@@ -9,10 +9,10 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 
 // Standalone Test for Sending SMS
-export const testSendSms = async () => {
+export const testSendSms = async (msg) => {
   try {
     const message = await client.messages.create({
-      body: 'Hello from Twilio!',
+      body: msg,
       from: process.env.TWILIO_PHONE_NUMBER,
       to: '+917872358979', // Use a valid phone number in E.164 format
     });
