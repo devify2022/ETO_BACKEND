@@ -38,6 +38,18 @@ const rideDetailsSchema = new Schema({
     type: Number,
     default: 0,
   },
+  admin_percentage: {
+    type: Number,
+    default: 0,
+  },
+  admin_profit: {
+    type: Number,
+    default: 0,
+  },
+  driver_profit: {
+    type: Number,
+    default: 0,
+  },
   payment_mode: {
     type: String,
   },
