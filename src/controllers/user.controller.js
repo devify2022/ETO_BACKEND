@@ -172,9 +172,13 @@ export const verify_OTP = asyncHandler(async (req, res) => {
 
     if (!passengerDetails) {
       passengerDetails = new Rider({
-        name: "Rider",
+        name: "Rider", // Default name if not provided
         phone,
         userId: user._id,
+        current_location: {
+          type: "Point",
+          coordinates: [0, 0], // Default location if not provided
+        },
       });
 
       await passengerDetails.save();
@@ -259,8 +263,8 @@ export const resendOTP = asyncHandler(async (req, res) => {
     // Send OTP via Twilio
     // await sendOtpViaTwilio(phone, newOtp);
     // Execute Standalone Test
-    testSendSms(newOtp)
-    
+    testSendSms(newOtp);
+
     return res
       .status(200)
       .json(new ApiResponse(200, newOtp, "OTP Sent Successfully"));

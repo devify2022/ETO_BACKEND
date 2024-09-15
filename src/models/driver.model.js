@@ -24,6 +24,10 @@ const driverSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  socketId: {
+    type: String, // To store driver's current socketId
+    default: null,
+  },
   online_wallet: {
     type: Number,
     default: 0,
@@ -77,22 +81,14 @@ const driverSchema = new Schema({
   aadhar_number: {
     type: String,
     required: [true, "Aadhar number is required"],
-    // trim: true,
-    // validate: {
-    //   validator: function (v) {
-    //     return /^\d{4}-\d{4}-\d{4}$/.test(v);
-    //   },
-    // },
   },
   driver_photo: {
-    type: String, //url
-    // required: [true, "Driver photo is required"],
+    type: String, // URL
   },
   car_photo: {
-    type: [String],
-    // required: [true, "Car photo is required"],
+    type: [String], // Array of URLs
   },
-  lisense_number: {
+  license_number: {
     type: String,
     required: [true, "License number is required"],
     trim: true,
@@ -104,16 +100,21 @@ const driverSchema = new Schema({
     },
   ],
   aadhar_front_photo: {
-    type: String,
-    // required: [true, "Aadhar front photo is required"],
+    type: String, // URL
   },
   aadhar_back_photo: {
-    type: String,
-    // required: [true, "Aadhar back photo is required"],
+    type: String, // URL
   },
   current_location: {
-    type: [Number],
-    index: "2dsphere",
+    type: {
+      type: String,
+      enum: ["Point"],
+      required: true,
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      required: true,
+    },
   },
   total_complete_rides: {
     type: Number,
@@ -124,8 +125,12 @@ const driverSchema = new Schema({
     default: false,
   },
   current_ride_id: {
-    type: String,
+    type: Schema.Types.ObjectId, // Assuming it's an ObjectId
+    ref: "RideDetails",
   },
 });
+
+// Create a 2dsphere index on the current_location field for geospatial queries
+driverSchema.index({ current_location: "2dsphere" });
 
 export const Driver = mongoose.model("Driver", driverSchema);
