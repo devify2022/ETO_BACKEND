@@ -1,11 +1,13 @@
 // importing modules
+import axios from "axios";
+import sha256 from "sha256";
 
 // UAT environment
 const MERCHANT_ID = "PGTESTPAYUAT86";
 const PHONE_PE_HOST_URL = "https://api-preprod.phonepe.com/apis/pg-sandbox";
 const SALT_INDEX = 1;
 const SALT_KEY = "96434309-7796-489d-8924-ab56988a6076";
-const APP_BE_URL = "http://localhost:3002";
+const APP_BE_URL = "http://localhost:8000";
 
 // Function to generate a unique transaction ID
 function generatedTranscId() {
@@ -24,19 +26,20 @@ export const createPayment = async function (req, res, next) {
       merchantTransactionId: merchantUserId,
       merchantUserId: useId,
       amount: 1000,
-      redirectUrl: `http://localhost:3002/redirect-url/${merchantUserId}`,
+      redirectUrl: `http://localhost:8000/redirect-url/${merchantUserId}`,
       redirectMode: "REDIRECT",
       mobileNumber: "9999999999",
       paymentInstrument: {
         type: "PAY_PAGE",
       },
     };
+    console.log({ normalPayLoad });
 
     let bufferObj = Buffer.from(JSON.stringify(normalPayLoad), "utf8");
     let base64EncodedPayload = bufferObj.toString("base64");
 
     // X-VERIFY => SHA256(base64EncodedPayload + "/pg/v1/pay" + SALT_KEY) + ### + SALT_INDEX
-    let string = base64EncodedPayload + "/pg/v1/pay" + SALT_KEY;
+    let string = `${base64EncodedPayload}/pg/v1/pay${SALT_KEY}`;
     let sha256_val = sha256(string);
     let xVerifyChecksum = sha256_val + "###" + SALT_INDEX;
 
@@ -54,6 +57,7 @@ export const createPayment = async function (req, res, next) {
     axios
       .request(options)
       .then(function (resp) {
+        console.log(resp.data.data.instrumentResponse.redirectInfo.url);
         res.redirect(resp.data.data.instrumentResponse.redirectInfo.url);
       })
       .catch(function (err) {
@@ -67,11 +71,13 @@ export const checkStatus = async function (req, res) {
   const { merchantTransactionId } = req.params;
   // check the status of the payment using merchantTransactionId
   if (merchantTransactionId) {
-    let statusUrl = `${PHONE_PE_HOST_URL}/pg/v1/status/${MERCHANT_ID}/ +
-      merchantTransactionId;`;
+    let statusUrl =
+      `${PHONE_PE_HOST_URL}/pg/v1/status/${MERCHANT_ID}/` +
+      merchantTransactionId;
 
     // generate X-VERIFY
-    let string = ` /pg/v1/status/${MERCHANT_ID}/ + merchantTransactionId + SALT_KEY`;
+    let string =
+      `/pg/v1/status/${MERCHANT_ID}/` + merchantTransactionId + SALT_KEY;
     let sha256_val = sha256(string);
     let xVerifyChecksum = sha256_val + "###" + SALT_INDEX;
 
