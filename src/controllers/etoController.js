@@ -10,7 +10,9 @@ export const getETOCardById = asyncHandler(async (req, res) => {
     const etoCard = await ETOCard.findOne({ driverId: id });
 
     if (!etoCard) {
-      throw new ApiError(404, "ETOCard not found");
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "ETOCard not found"));
     }
 
     return res
@@ -18,6 +20,8 @@ export const getETOCardById = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, etoCard, "ETOCard retrieved successfully"));
   } catch (error) {
     console.error("Error retrieving ETOCard:", error.message);
-    throw new ApiError(500, "Failed to retrieve ETOCard");
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to retrieve ETOCard"));
   }
 });

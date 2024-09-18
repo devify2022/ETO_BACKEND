@@ -10,6 +10,7 @@ const client = twilio(accountSid, authToken);
 
 // Standalone Test for Sending SMS
 export const testSendSms = async (msg) => {
+  // console.log(accountSid, authToken)
   try {
     const message = await client.messages.create({
       body: msg,
