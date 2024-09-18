@@ -75,7 +75,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     // await sendOtpViaTwilio(phone, newOtp);
 
     // Execute Standalone Test
-    testSendSms(newOtp);
+    // testSendSms(newOtp);
 
     const data = {
       role,
@@ -122,7 +122,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     // Send OTP via Twilio
     // await sendOtpViaTwilio(phone, newOtp);
     // Execute Standalone Test
-    testSendSms(newOtp);
+    // testSendSms(newOtp);
 
     return res
       .status(200)
@@ -290,7 +290,7 @@ export const resendOTP = asyncHandler(async (req, res) => {
     // Send OTP via Twilio
     // await sendOtpViaTwilio(phone, newOtp);
     // Execute Standalone Test
-    testSendSms(newOtp);
+    // testSendSms(newOtp);
 
     return res
       .status(200)
