@@ -80,19 +80,27 @@ const rideDetailsSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  isRide_accept: {
+    type: Boolean,
+    default: false,
+  },
   isRide_started: {
+    type: Boolean,
+    default: false,
+  },
+  isRide_ended: {
     type: Boolean,
     default: false,
   },
   started_time: {
     type: Date, // Use Date type for time
   },
-  isRide_ended: {
-    type: Boolean,
-    default: false,
-  },
   drop_time: {
     type: Date, // Use Date type for time
+  },
+  ride_end_time: {
+    // Add this field to store the end time
+    type: Date,
   },
   total_duration: {
     type: String, // Duration as a string (e.g., "15 mins")

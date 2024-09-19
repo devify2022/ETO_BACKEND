@@ -16,7 +16,7 @@ function generatedTranscId() {
 
 // endpoint to initiate a payment
 export const createPayment = async function (req, res, next) {
-  console.log("bosikoron");
+  // console.log("bosikoron");
   try {
     const payEndPoint = "/pg/v1/pay";
     const merchantUserId = generatedTranscId();
@@ -107,9 +107,3 @@ export const checkStatus = async function (req, res) {
     res.send("Sorry!! Error");
   }
 };
-
-// Starting the server
-// const port = 3002;
-// app.listen(port, () => {
-//   console.log(PhonePe application listening on port ${port});
-// });

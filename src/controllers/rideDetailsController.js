@@ -5,7 +5,9 @@ import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import generateOtp from "../utils/otpGenerate.js";
 import { RideDetails } from "../models/rideDetails.model.js";
+import mongoose from "mongoose";
 
+// Looking Drivers for Ride
 export const findAvailableDrivers = (io) =>
   asyncHandler(async (req, res, next) => {
     const { riderId, dropLocation, totalKm } = req.body;
@@ -119,6 +121,7 @@ export const findAvailableDrivers = (io) =>
     }
   });
 
+// Accept Ride request
 export const acceptRide = (io) =>
   asyncHandler(async (req, res) => {
     const {
@@ -130,7 +133,7 @@ export const acceptRide = (io) =>
       totalKm,
     } = req.body;
 
-    console.log(req.body)
+    console.log(req.body);
 
     if (
       !driverId ||
@@ -222,18 +225,10 @@ export const acceptRide = (io) =>
         admin_percentage: adminPercentage,
         admin_profit: adminAmount,
         driver_profit: driverProfit,
-        isRide_started: true,
+        isRide_accept: true,
       });
 
       await newRide.save();
-
-      rider.is_on_ride = true;
-      rider.current_ride_id = newRide._id;
-      await rider.save();
-
-      driver.is_on_ride = true;
-      driver.current_ride_id = newRide._id;
-      await driver.save();
 
       if (rider.socketId) {
         io.to(rider.socketId).emit("rideAccepted", {
@@ -243,7 +238,7 @@ export const acceptRide = (io) =>
           driverLocation: driver.current_location,
           totalPrice: newRide.total_amount,
           pickupOtp,
-          dropOtp
+          dropOtp,
         });
       }
 
@@ -269,5 +264,202 @@ export const acceptRide = (io) =>
       return res
         .status(500)
         .json(new ApiResponse(500, null, "Failed to accept the ride"));
+    }
+  });
+
+// Verify Pickup OTP
+export const verifyPickUpOtp = asyncHandler(async (req, res) => {
+  const { rideId, pickupOtp } = req.body;
+  console.log(req.body);
+
+  // Check if the required fields are provided
+  if (!rideId || !pickupOtp) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Ride ID, Pickup OTP are required"));
+  }
+
+  try {
+    // Find the ride by ID
+    const ride = await RideDetails.findById(rideId);
+    const rider = await Rider.findById({ _id: ride.riderId });
+    const driver = await Driver.findOne({ _id: ride.driverId });
+
+    // Check if the ride exists
+    if (!ride) {
+      return res.status(404).json(new ApiResponse(404, null, "Ride not found"));
+    }
+
+    console.log(ride);
+
+    // Verify the pickup OTP
+    if (ride.pickup_otp !== pickupOtp) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "Invalid Pickup OTP"));
+    }
+
+    // Set the ride status to 'on ride' after OTP verification
+    rider.is_on_ride = true;
+    rider.current_ride_id = ride._id;
+    await rider.save();
+
+    driver.is_on_ride = true;
+    driver.current_ride_id = ride._id;
+    await driver.save();
+
+    ride.isRide_started = true;
+    ride.started_time = Date.now();
+    await ride.save();
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          ride,
+          "OTP verified successfully and ride is now active"
+        )
+      );
+  } catch (error) {
+    console.error("Error verifying OTPs:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to verify OTPs"));
+  }
+});
+
+// Verify Drop OTP
+export const verifyDropOtp = asyncHandler(async (req, res) => {
+  const { rideId, dropOtp } = req.body;
+  console.log(req.body);
+
+  // Check if the required fields are provided
+  if (!rideId || !dropOtp) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Ride ID, and Drop OTP are required"));
+  }
+
+  try {
+    // Find the ride by ID
+    const ride = await RideDetails.findById(rideId);
+    const rider = await Rider.findById({ _id: ride.riderId });
+    const driver = await Driver.findOne({ _id: ride.driverId });
+
+    // Check if the ride exists
+    if (!ride) {
+      return res.status(404).json(new ApiResponse(404, null, "Ride not found"));
+    }
+
+    // console.log(ride);
+
+    // Verify the drop OTP
+    if (ride.drop_otp !== dropOtp) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "Invalid Drop OTP"));
+    }
+
+    // Set the ride status to 'on ride' after OTP verification
+    rider.is_on_ride = false;
+    rider.current_ride_id = null;
+    rider.ride_ids.push(new mongoose.Types.ObjectId(rideId));
+    await rider.save();
+
+    driver.is_on_ride = false;
+    driver.current_ride_id = null;
+    driver.ride_ids.push(new mongoose.Types.ObjectId(rideId));
+    await driver.save();
+
+    ride.isRide_started = false;
+    ride.isRide_ended = true;
+    ride.ride_end_time = Date.now();
+    await ride.save();
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          ride,
+          "OTP verified successfully and ride is now finished"
+        )
+      );
+  } catch (error) {
+    console.error("Error verifying OTPs:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to verify OTP"));
+  }
+});
+
+// Cancel ride API
+export const cancelRide = (io) =>
+  asyncHandler(async (req, res) => {
+    const { rideId, riderId } = req.body;
+
+    // Check if the required fields are provided
+    if (!rideId || !riderId) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "Ride ID and Rider ID are required"));
+    }
+
+    try {
+      // Find the ride by ID
+      const ride = await RideDetails.findById(rideId);
+
+      // Log the retrieved ride
+      console.log("Retrieved ride:", ride);
+
+      // Check if the ride exists
+      if (!ride) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, null, "Ride not found"));
+      }
+
+      // Check if the ride belongs to the rider requesting cancellation
+      if (ride.riderId.toString() !== riderId) {
+        return res
+          .status(403)
+          .json(
+            new ApiResponse(
+              403,
+              null,
+              "You are not authorized to cancel this ride"
+            )
+          );
+      }
+
+      // Find the driver associated with the ride
+      const driver = await Driver.findOne({ _id: ride.driverId });
+
+      // Check if the driver exists
+      if (!driver) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, null, "Driver not found"));
+      }
+
+      // Delete the ride from the collection
+      await RideDetails.findByIdAndDelete(rideId);
+
+      // Notify the driver that the ride has been canceled via Socket.io
+      if (driver.socketId) {
+        io.to(driver.socketId).emit("cancelRide", {
+          message: "Ride Canceled",
+        });
+      }
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, null, "Ride canceled successfully"));
+    } catch (error) {
+      console.error("Error canceling ride:", error.message);
+      return res
+        .status(500)
+        .json(new ApiResponse(500, null, "Failed to cancel ride"));
     }
   });
