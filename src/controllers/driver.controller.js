@@ -294,3 +294,133 @@ export const updateDriverProfile = asyncHandler(async (req, res) => {
       .json(new ApiResponse(500, null, "Failed to update driver profile"));
   }
 });
+
+// Get All Active Drivers Function
+export const getAllActiveDrivers = asyncHandler(async (req, res) => {
+  try {
+    // Find all drivers where isActive is true
+    const activeDrivers = await Driver.find({ isActive: true });
+
+    if (!activeDrivers || activeDrivers.length === 0) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "No active drivers found"));
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          activeDrivers,
+          "Active drivers retrieved successfully"
+        )
+      );
+  } catch (error) {
+    console.error("Error retrieving active drivers:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to retrieve active drivers"));
+  }
+});
+
+// Activate Driver Function
+export const activateDriver = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Driver ID is required"));
+  }
+
+  try {
+    // Find the driver by ID and update `isActive` to true
+    const driver = await Driver.findByIdAndUpdate(
+      id,
+      { isActive: true },
+      { new: true }
+    );
+
+    if (!driver) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Driver not found"));
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, driver, "Driver activated successfully"));
+  } catch (error) {
+    console.error("Error activating driver:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to activate driver"));
+  }
+});
+
+// Deactivate Driver Function
+export const deactivateDriver = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Driver ID is required"));
+  }
+
+  try {
+    // Find the driver by ID and update `isActive` to false
+    const driver = await Driver.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true }
+    );
+
+    if (!driver) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Driver not found"));
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, driver, "Driver deactivated successfully"));
+  } catch (error) {
+    console.error("Error deactivating driver:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to deactivate driver"));
+  }
+});
+
+// Delete Driver Function
+export const deleteDriver = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Driver ID is required"));
+  }
+
+  try {
+    // Find and delete the driver by ID
+    const driver = await Driver.findByIdAndDelete(id);
+
+    if (!driver) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Driver not found"));
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Driver deleted successfully"));
+  } catch (error) {
+    console.error("Error deleting driver:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to delete driver"));
+  }
+});

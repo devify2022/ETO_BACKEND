@@ -10,26 +10,29 @@ Create an API to allow the rider to cancel the ride. When the ride is canceled, 
 4. Create a Recent Rides API
 Create an API that, given a driver's ID and a timestamp, returns a maximum of 5 recent rides.
 
-5. Create a Current Ride API for Driver
+5. Create a Current Ride API for Driver (DONE)
 Create an API that retrieves the driver's current ongoing ride details.
 
-6. Create a Ride History API for Driver
+6. Create a Ride History API for Driver (DONE)
 Create an API that retrieves the ride history for a specific driver.
 
-7. Create a Next Ride API for Driver
-Create an API that retrieves the next upcoming ride for the driver. (have doubt)
+7. Create a Next Ride API for Driver (Have Doubt)
+Create an API that retrieves the next upcoming ride for the driver. (Have Doubt)
 
 8. Create a Ride History API for Rider
 Create an API that retrieves the ride history for a specific rider.
 
-9. Create an API for Driver's Total Earnings (Date-wise)
+9. Create an API for Driver's Total Earnings Date-wise (Have Doubt)
 Create an API that returns the total earnings of the driver, filtered by date.
 
 10. Create an API for Driver's Total Withdrawals (Date-wise)
 Create an API that returns the total withdrawals made by the driver, filtered by date.
 
-11. Create a Login/Logout API for Driver
-Create an API to handle login and logout functionality for the driver.
+11. Create a Active And Deactive API for Driver (Done)
+
+12. Track Driver location after login (Done)
+
+13- Track Rider Location (Done)
 
 For Admin:
 1. Create a Ride History API for Admin
