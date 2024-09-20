@@ -8,7 +8,6 @@ import { Driver } from "./models/driver.model.js";
 import { Rider } from "./models/rider.model.js";
 import { RideDetails } from "./models/rideDetails.model.js";
 
-
 // Initialize Express app
 const app = express();
 
@@ -63,43 +62,114 @@ io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
   socketInstance = socket;
 
-  // Listen for event where driver registers their socketId
+  // Register Driver Socket ID with location update and isActive check
   socket.on("registerDriver", async (data) => {
-    const { driverId } = data;
+    const { driverId, lat, lng } = data;
 
-    if (!driverId) {
-      return socket.emit("error", { message: "Driver ID is required" });
+    if (!driverId || !lat || !lng) {
+      return socket.emit("error", {
+        message: "Driver ID and location required",
+      });
     }
 
     try {
-      // Update the driver's socketId in the database
-      await Driver.findByIdAndUpdate(driverId, { socketId: socket.id });
-      console.log(`Driver ${driverId} connected with socket ${socket.id}`);
+      const driver = await Driver.findById(driverId);
+
+      if (!driver) {
+        return socket.emit("error", { message: "Driver not found" });
+      }
+
+      if (driver.isActive) {
+        await Driver.findByIdAndUpdate(driverId, {
+          socketId: socket.id,
+          location: {
+            type: "Point",
+            coordinates: [lng, lat],
+          },
+        });
+
+        console.log(
+          `Driver ${driverId} connected with socket ${socket.id} and location updated`
+        );
+
+        // Emit driver's updated location to the rider (if a ride is ongoing)
+        const ride = await RideDetails.findOne({
+          driverId,
+          isRide_started: true,
+        });
+        if (ride && ride.riderId) {
+          const rider = await Rider.findById(ride.riderId);
+          if (rider && rider.socketId) {
+            io.to(rider.socketId).emit("driverLocationUpdate", {
+              driverId,
+              location: { lat, lng },
+              message: "Driver's location updated",
+            });
+          }
+        }
+      } else {
+        console.log(`Driver ${driverId} is not active, location not updated`);
+        return socket.emit("error", {
+          message: "Driver is not active, cannot update location",
+        });
+      }
     } catch (error) {
-      console.error("Error updating driver's socketId:", error.message);
-      socket.emit("error", { message: "Failed to register driver" });
+      console.error(
+        "Error updating driver's socketId or location:",
+        error.message
+      );
+      socket.emit("error", {
+        message: "Failed to register driver and update location",
+      });
     }
   });
 
-  // Listen for event where rider registers their socketId
+  // Register Rider Socket ID with location update
   socket.on("registerRider", async (data) => {
-    const { riderId } = data;
+    const { riderId, lat, lng } = data;
 
-    if (!riderId) {
-      return socket.emit("error", { message: "Rider ID is required" });
+    if (!riderId || !lat || !lng) {
+      return socket.emit("error", {
+        message: "Rider ID and location required",
+      });
     }
 
     try {
-      // Update the rider's socketId in the database
-      await Rider.findByIdAndUpdate(riderId, { socketId: socket.id });
-      console.log(`Rider ${riderId} connected with socket ${socket.id}`);
+      await Rider.findByIdAndUpdate(riderId, {
+        socketId: socket.id,
+        location: {
+          type: "Point",
+          coordinates: [lng, lat],
+        },
+      });
+      console.log(
+        `Rider ${riderId} connected with socket ${socket.id} and location updated`
+      );
+
+      // Emit rider's updated location to the driver (if a ride is ongoing)
+      const ride = await RideDetails.findOne({ riderId, isRide_started: true });
+      if (ride && ride.driverId) {
+        const driver = await Driver.findById(ride.driverId);
+        if (driver && driver.socketId) {
+          io.to(driver.socketId).emit("riderLocationUpdate", {
+            riderId,
+            location: { lat, lng },
+            message: "Rider's location updated",
+          });
+        }
+      }
     } catch (error) {
-      console.error("Error updating rider's socketId:", error.message);
-      socket.emit("error", { message: "Failed to register rider" });
+      console.error(
+        "Error updating rider's socketId or location:",
+        error.message
+      );
+      socket.emit("error", {
+        message: "Failed to register rider and update location",
+      });
     }
   });
 
-  // Handle the 'acceptRide' event
+  // Accept Ride Event
   socket.on("acceptRide", async (data) => {
     const { rideId, driverId } = data;
 
@@ -110,7 +180,6 @@ io.on("connection", (socket) => {
     }
 
     try {
-
       // Update ride status in the database
       const ride = await RideDetails.findByIdAndUpdate(
         rideId,

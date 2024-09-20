@@ -24,6 +24,10 @@ const driverSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  isApproved: {
+    type: Boolean,
+    default: false,
+  },
   socketId: {
     type: String, // To store driver's current socketId
     default: null,

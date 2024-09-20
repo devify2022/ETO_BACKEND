@@ -153,6 +153,115 @@ export const getDriverRideById = asyncHandler(async (req, res) => {
   }
 });
 
+// Get Driver's Current Ride Function
+export const getCurrentRide = asyncHandler(async (req, res) => {
+  const { id } = req.params; // driver ID
+
+  if (!id) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Driver ID is required"));
+  }
+
+  try {
+    // Find the driver by ID
+    const driver = await Driver.findById(id);
+    if (!driver) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Driver not found"));
+    }
+
+    // Check if the driver is on a ride
+    if (!driver.current_ride_id) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "No ongoing ride for this driver"));
+    }
+
+    // Fetch the current ride details
+    const currentRide = await RideDetails.findById(driver.current_ride_id);
+    if (!currentRide) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Current ride details not found"));
+    }
+
+    // Return the current ride details
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, currentRide, "Current ride retrieved successfully")
+      );
+  } catch (error) {
+    console.error("Error retrieving current ride:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to retrieve current ride"));
+  }
+});
+
+// Get Driver's Ride History Function with Debugging
+export const getRideHistory = asyncHandler(async (req, res) => {
+  const { id } = req.params; // driver ID
+
+  if (!id) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Driver ID is required"));
+  }
+
+  try {
+    // Find the driver by ID
+    const driver = await Driver.findById(id);
+    if (!driver) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Driver not found"));
+    }
+
+    // If there are no ride IDs, return early
+    if (!driver.ride_ids || driver.ride_ids.length === 0) {
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(404, null, "No ride history found for this driver")
+        );
+    }
+
+    // Fetch all rides associated with this driver
+    const rides = await RideDetails.find({ _id: { $in: driver.ride_ids } });
+
+    // Identify missing ride IDs
+    const missingRides = driver.ride_ids.filter(
+      (rideId) => !rides.some((ride) => ride._id.equals(rideId))
+    );
+
+    if (missingRides.length > 0) {
+      console.warn(
+        "Missing ride details for the following ride IDs:",
+        missingRides
+      );
+    }
+
+    // Return the ride history, with a warning if any rides are missing
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { rides, missingRides },
+          "Ride history retrieved successfully"
+        )
+      );
+  } catch (error) {
+    console.error("Error retrieving ride history:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to retrieve ride history"));
+  }
+});
+
 // Update Driver Profile Function
 export const updateDriverProfile = asyncHandler(async (req, res) => {
   const { id } = req.params;

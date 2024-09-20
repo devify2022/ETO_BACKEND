@@ -7,7 +7,7 @@ const MERCHANT_ID = "PGTESTPAYUAT86";
 const PHONE_PE_HOST_URL = "https://api-preprod.phonepe.com/apis/pg-sandbox";
 const SALT_INDEX = 1;
 const SALT_KEY = "96434309-7796-489d-8924-ab56988a6076";
-const APP_BE_URL = "http://localhost:8000";
+// const APP_BE_URL = "http://localhost:8000";
 
 // Function to generate a unique transaction ID
 function generatedTranscId() {
@@ -17,18 +17,21 @@ function generatedTranscId() {
 // endpoint to initiate a payment
 export const createPayment = async function (req, res, next) {
   // console.log("bosikoron");
+
+  const { useId, amount, mobileNumber } = req.body;
+
   try {
     const payEndPoint = "/pg/v1/pay";
     const merchantUserId = generatedTranscId();
-    const useId = 123;
+    const useId = useId;
     const normalPayLoad = {
       merchantId: MERCHANT_ID,
       merchantTransactionId: merchantUserId,
       merchantUserId: useId,
-      amount: 1000,
+      amount: amount,
       redirectUrl: `http://localhost:8000/redirect-url/${merchantUserId}`,
       redirectMode: "REDIRECT",
-      mobileNumber: "9999999999",
+      mobileNumber: mobileNumber,
       paymentInstrument: {
         type: "PAY_PAGE",
       },
