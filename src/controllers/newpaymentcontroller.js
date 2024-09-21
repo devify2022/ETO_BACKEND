@@ -18,20 +18,20 @@ function generatedTranscId() {
 export const createPayment = async function (req, res, next) {
   // console.log("bosikoron");
 
-  const { useId, amount, mobileNumber } = req.body;
+  // const { useId, amount, mobileNumber } = req.body;
 
   try {
     const payEndPoint = "/pg/v1/pay";
     const merchantUserId = generatedTranscId();
-    const useId = useId;
+    const useId = "user123";
     const normalPayLoad = {
       merchantId: MERCHANT_ID,
-      merchantTransactionId: merchantUserId,
-      merchantUserId: useId,
-      amount: amount,
+      merchantTransactionId: merchantUserId, // need
+      merchantUserId: useId, //need
+      amount: 1000, // need
       redirectUrl: `http://localhost:8000/redirect-url/${merchantUserId}`,
       redirectMode: "REDIRECT",
-      mobileNumber: mobileNumber,
+      mobileNumber: "9755225577", //need
       paymentInstrument: {
         type: "PAY_PAGE",
       },
@@ -39,12 +39,12 @@ export const createPayment = async function (req, res, next) {
     console.log({ normalPayLoad });
 
     let bufferObj = Buffer.from(JSON.stringify(normalPayLoad), "utf8");
-    let base64EncodedPayload = bufferObj.toString("base64");
+    let base64EncodedPayload = bufferObj.toString("base64"); // need
 
     // X-VERIFY => SHA256(base64EncodedPayload + "/pg/v1/pay" + SALT_KEY) + ### + SALT_INDEX
     let string = `${base64EncodedPayload}/pg/v1/pay${SALT_KEY}`;
     let sha256_val = sha256(string);
-    let xVerifyChecksum = sha256_val + "###" + SALT_INDEX;
+    let xVerifyChecksum = sha256_val + "###" + SALT_INDEX; // need
 
     const options = {
       method: "post",

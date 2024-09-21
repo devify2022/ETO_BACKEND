@@ -19,7 +19,7 @@ Create an API that retrieves the ride history for a specific driver.
 7. Create a Next Ride API for Driver (Have Doubt)
 Create an API that retrieves the next upcoming ride for the driver. (Have Doubt)
 
-8. Create a Ride History API for Rider
+8. Create a Ride History API for Rider (Done)
 Create an API that retrieves the ride history for a specific rider.
 
 9. Create an API for Driver's Total Earnings Date-wise (Have Doubt)
@@ -35,11 +35,15 @@ Create an API that returns the total withdrawals made by the driver, filtered by
 13- Track Rider Location (Done)
 
 For Admin:
-1. Create a Ride History API for Admin
+1. Create a Ride History API for Admin (Done)
 Create an API that retrieves the entire ride history for the admin.
 
-2. Create a Ride History API for Admin to Get Ride History of All Drivers
+2. Create a Ride History API for Admin to Get Ride History of All Drivers (Done)
 Create an API that allows the admin to retrieve the ride history for all drivers.
 
-3. Create a Ride History API for Admin to Get Ride History of All Riders
+3. Create a Ride History API for Admin to Get Ride History of All Riders (Done)
 Create an API that allows the admin to retrieve the ride history for all riders.
+
+4. Get all active driver (Done)
+
+5. 
