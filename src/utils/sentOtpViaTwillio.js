@@ -1,41 +1,57 @@
-import twilio from 'twilio';
 import dotenv from 'dotenv';
 import { ApiError } from './apiError.js';
+import request from 'request';
 
 dotenv.config();
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const client = twilio(accountSid, authToken);
+const authToken = process.env.MESSAGE_CENTRAL_AUTH_TOKEN; // Ensure this is stored in your .env file
+const customerId = process.env.MESSAGE_CENTRAL_CUSTOMER_ID; // Store this in .env as well
 
-// Standalone Test for Sending SMS
-export const testSendSms = async (msg) => {
-  // console.log(accountSid, authToken)
-  try {
-    const message = await client.messages.create({
-      body: msg,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: '+917872358979', // Use a valid phone number in E.164 format
+// Function to Send OTP via Message Central
+export const sendOtpViaMessageCentral = async (phone) => {
+  const options = {
+    method: 'POST',
+    url: `https://cpaas.messagecentral.com/verification/v3/send?countryCode=91&customerId=${customerId}&flowType=SMS&mobileNumber=${phone}`,
+    headers: {
+      'authToken': authToken,
+    },
+  };
+
+  return new Promise((resolve, reject) => {
+    request(options, function (error, response) {
+      if (error) {
+        console.error("Error sending OTP via Message Central:", error.message);
+        reject(new ApiError(500, "Failed to send OTP"));
+      } else {
+        console.log("OTP sent successfully:", response.body);
+        resolve(response.body); // Return the response if needed
+      }
     });
-    console.log(`Test SMS sent successfully with SID: ${message.sid}`);
-  } catch (error) {
-    console.error("Error sending test SMS:", error.message);
-  }
+  });
 };
 
-// Function to Send OTP via Twilio
-export const sendOtpViaTwilio = async (phone, otp) => {
-  try {
-    const message = await client.messages.create({
-      body: `Your OTP for login is: ${otp}`,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: phone,
+// Function to Validate OTP via Message Central
+export const validateOtpViaMessageCentral = async (phone, verificationId, code) => {
+  const options = {
+    method: 'GET',
+    url: `https://cpaas.messagecentral.com/verification/v3/validateOtp?countryCode=91&mobileNumber=${phone}&verificationId=${verificationId}&customerId=${customerId}&code=${code}`,
+    headers: {
+      'authToken': authToken,
+    },
+  };
+
+  return new Promise((resolve, reject) => {
+    request(options, function (error, response) {
+      if (error) {
+        console.error("Error validating OTP via Message Central:", error.message);
+        reject(new ApiError(500, "Failed to validate OTP"));
+      } else {
+        console.log("OTP validation successful:", response.body);
+        resolve(response.body); // Return the response if needed
+      }
     });
-    console.log(`OTP sent successfully with SID: ${message.sid}`);
-  } catch (error) {
-    console.error("Error sending OTP via Twilio:", error.message);
-    throw new ApiError(500, "Failed to send OTP");
-  }
+  });
 };
+
 
 
