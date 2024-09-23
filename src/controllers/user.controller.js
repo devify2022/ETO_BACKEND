@@ -7,7 +7,7 @@ import generateOtp from "../utils/otpGenerate.js";
 import checkRateLimit from "../utils/checkRateLimit.js";
 import { Rider } from "../models/rider.model.js";
 import { Driver } from "../models/driver.model.js";
-import { validateOtpViaMessageCentral, sendOtpViaMessageCentral } from "../utils/sentOtpViaTwillio.js";
+// import { sendOtpViaTwilio, testSendSms } from "../utils/sentOtpViaTwillio.js";
 
 // Generate Access and Refresh Tokens
 const generateAccessAndRefreshToken = async (userId) => {
@@ -75,7 +75,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     // await sendOtpViaTwilio(phone, newOtp);
 
     // Execute Standalone Test
-   const res = await sendOtpViaMessageCentral(phone);
+    // testSendSms(newOtp);
 
     const data = {
       role,
@@ -83,7 +83,6 @@ export const loginUser = asyncHandler(async (req, res) => {
       refreshToken,
       userDetails: userDetails || {},
       otp: newOtp,
-      verificationId:res.verificationId
     };
 
     return res
@@ -123,11 +122,11 @@ export const loginUser = asyncHandler(async (req, res) => {
     // Send OTP via Twilio
     // await sendOtpViaTwilio(phone, newOtp);
     // Execute Standalone Test
-   const res = await sendOtpViaMessageCentral(phone);
+    // testSendSms(newOtp);
 
     return res
       .status(200)
-      .json(new ApiResponse(200, { verificationId: res.verificationId }, "OTP Sent Successfully"))
+      .json(new ApiResponse(200, newOtp, "OTP Sent Successfully"));
   }
 });
 
@@ -276,7 +275,7 @@ export const resendOTP = asyncHandler(async (req, res) => {
         new ApiResponse(
           429,
           null,
-          `Too many requests. Try again in ${Math.ceil(remainingTime / 60000)} minutes.`
+          'Too many requests. Try again in ${Math.ceil(remainingTime / 60000)} minutes.'
         )
       );
   }
@@ -291,7 +290,7 @@ export const resendOTP = asyncHandler(async (req, res) => {
     // Send OTP via Twilio
     // await sendOtpViaTwilio(phone, newOtp);
     // Execute Standalone Test
-    sendOtpViaMessageCentral(phone);
+    // testSendSms(newOtp);
 
     return res
       .status(200)
@@ -329,39 +328,3 @@ export const logoutUser = asyncHandler(async (req, res) => {
       .json(new ApiResponse(500, null, "Failed to log out user"));
   }
 });
-
-// Validate OTP Function
-export const validateOtp = asyncHandler(async (req, res) => {
-  const { phone, verificationId, code } = req.body;
-
-  try {
-    // Call the Message Central API to validate the OTP
-    const validationResponse = await validateOtpViaMessageCentral(phone, verificationId, code);
-
-    // Process the validation response, assuming it contains a success indicator
-    if (validationResponse.success) {
-      return res
-        .status(200)
-        .json(new ApiResponse(200, validationResponse, "OTP validated successfully"));
-    } else {
-      return res
-        .status(400)
-        .json(new ApiResponse(400, validationResponse, "Invalid OTP"));
-    }
-  } catch (error) {
-    console.error("Error validating OTP:", error.message);
-    return res
-      .status(500)
-      .json(new ApiResponse(500, null, "Failed to validate OTP"));
-  }
-});
-
-export const sendOtp = asyncHandler(async(req,res)=>{
-  const { phone} = req.body;
-  try{
-   await sendOtpViaMessageCentral(phone);
-  }
-  catch{
-
-  }
-})

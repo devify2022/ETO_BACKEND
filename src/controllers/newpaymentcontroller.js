@@ -36,7 +36,7 @@ export const createPayment = async function (req, res, next) {
         type: "PAY_PAGE",
       },
     };
-    console.log({ normalPayLoad });
+    // console.log({ normalPayLoad });
 
     let bufferObj = Buffer.from(JSON.stringify(normalPayLoad), "utf8");
     let base64EncodedPayload = bufferObj.toString("base64"); // need

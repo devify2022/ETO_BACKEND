@@ -8,10 +8,6 @@ const usersSchema = new Schema(
       required: [true, "Phone number is required"],
       unique: true,
     },
-    otp: {
-      type: Number,
-      // required: [true, 'OTP is required'],
-    },
     isVerified: {
       type: Boolean,
       // required: [true, 'Verification status is required'],
