@@ -7,6 +7,10 @@ import generateOtp from "../utils/otpGenerate.js";
 import checkRateLimit from "../utils/checkRateLimit.js";
 import { Rider } from "../models/rider.model.js";
 import { Driver } from "../models/driver.model.js";
+import {
+  sendOtpViaMessageCentral,
+  validateOtpViaMessageCentral,
+} from "../utils/sentOtp.js";
 // import { sendOtpViaTwilio, testSendSms } from "../utils/sentOtpViaTwillio.js";
 
 // Generate Access and Refresh Tokens
@@ -35,7 +39,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 };
 
 // Login User Function
-export const loginUser = asyncHandler(async (req, res) => {
+export const loginAndSendOtp = asyncHandler(async (req, res) => {
   const { phone, isDriver } = req.body;
 
   if (!phone) {
@@ -46,7 +50,10 @@ export const loginUser = asyncHandler(async (req, res) => {
 
   let role = null;
   let userDetails = null;
+  let otpResponse = null;
+  let otpCredentials = null;
 
+  // Determine role and find existing user details (Driver or Passenger)
   if (isDriver) {
     userDetails = await Driver.findOne({ phone });
     role = "driver";
@@ -58,40 +65,41 @@ export const loginUser = asyncHandler(async (req, res) => {
   let user = await User.findOne({ phone });
 
   if (userDetails) {
+    // If the user exists in either Driver or Passenger collection
     if (!user) {
       return res.status(404).json(new ApiResponse(404, null, "User not found"));
     }
 
+    // Generate access and refresh tokens
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
       user._id
     );
 
-    const newOtp = generateOtp();
-    user.otp = newOtp;
+    // Reset the isVerified flag
     user.isVerified = false;
     await user.save();
 
-    // Send OTP via Twilio
-    // await sendOtpViaTwilio(phone, newOtp);
-
-    // Execute Standalone Test
-    // testSendSms(newOtp);
+    // Send OTP via Message Central
+    otpResponse = await sendOtpViaMessageCentral(phone);
+    // console.log(otpResponse);
+    otpCredentials = JSON.parse(otpResponse);
+    // console.log(otpCredentials);
 
     const data = {
       role,
       accessToken,
       refreshToken,
-      userDetails: userDetails || {},
-      otp: newOtp,
+      userDetails: userDetails || {}, // Send user details if available
+      otpdata: otpCredentials.data,
     };
 
     return res
       .status(200)
-      .json(new ApiResponse(200, data, "Logged in Successfully"));
+      .json(new ApiResponse(200, data, "Logged in successfully, OTP sent"));
   } else {
-    const newOtp = generateOtp();
-
+    // Handle new user registration
     if (user) {
+      // Check if the existing user role (isDriver) conflicts with the login attempt
       if (user.isDriver !== isDriver) {
         return res
           .status(409)
@@ -104,106 +112,142 @@ export const loginUser = asyncHandler(async (req, res) => {
           );
       }
 
-      user.otp = newOtp;
+      // Reset verification status
       user.isVerified = false;
       await user.save();
     } else {
+      // Create a new user with the provided role and unverified status
       user = new User({
         phone,
-        otp: newOtp,
         isVerified: false,
         isDriver,
-        isAdmin: false,
+        isAdmin: false, // Assuming normal users are not admins by default
       });
 
       await user.save();
     }
 
-    // Send OTP via Twilio
-    // await sendOtpViaTwilio(phone, newOtp);
-    // Execute Standalone Test
-    // testSendSms(newOtp);
+    // Send OTP via Message Central
+    otpResponse = await sendOtpViaMessageCentral(phone);
+    // console.log(otpResponse);
+    otpCredentials = JSON.parse(otpResponse);
+    // console.log(otpCredentials.data);
+
+    const newData = {
+      user,
+      otpdata: otpCredentials.data,
+    };
 
     return res
       .status(200)
-      .json(new ApiResponse(200, newOtp, "OTP Sent Successfully"));
+      .json(new ApiResponse(200, newData, "OTP sent successfully"));
   }
 });
 
 // Verify OTP Function
-export const verify_OTP = asyncHandler(async (req, res) => {
-  const { phone, otp } = req.body;
+export const verifyOtp = asyncHandler(async (req, res) => {
+  const { phone, verificationId, code } = req.body;
+  let validateData = null;
 
-  if (!phone || !otp) {
+  if (!phone || !verificationId || !code) {
     return res
       .status(400)
-      .json(new ApiResponse(400, null, "Phone number and OTP are required"));
+      .json(
+        new ApiResponse(
+          400,
+          null,
+          "Phone number, verification ID, and OTP code are required"
+        )
+      );
   }
 
-  const user = await User.findOne({ phone });
+  let user = await User.findOne({ phone });
 
   if (!user) {
     return res.status(404).json(new ApiResponse(404, null, "User not found"));
   }
 
-  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-    user._id
-  );
+  try {
+    // Validate the OTP via Message Central
+    const validationResponse = await validateOtpViaMessageCentral(
+      phone,
+      verificationId,
+      code
+    );
 
-  const now = new Date();
-  const otpTimestamp = new Date(user.updatedAt);
-  const timeDifference = (now - otpTimestamp) / 1000;
+    validateData = JSON.parse(validationResponse);
 
-  if (timeDifference > 300) {
-    return res.status(400).json(new ApiResponse(400, null, "OTP has expired"));
-  }
+    // console.log(validateData);
 
-  const isOtpVerified = user.otp === otp;
-  if (!isOtpVerified) {
-    return res.status(400).json(new ApiResponse(400, null, "Invalid OTP"));
-  }
-
-  user.isVerified = true;
-  await user.save();
-
-  if (user.isDriver) {
-    const driverDetails = await Driver.findOne({ phone });
-
-    const msg = {
-      role: "driver",
-      isNewDriver: !driverDetails,
-      phone: user.phone,
-      accessToken,
-      refreshToken,
-      driverDetails: driverDetails || {},
-    };
-    return res.status(200).json(new ApiResponse(200, msg, "OTP Verified"));
-  } else {
-    let passengerDetails = await Rider.findOne({ phone });
-
-    if (!passengerDetails) {
-      passengerDetails = new Rider({
-        name: "Rider", // Default name if not provided
-        phone,
-        userId: user._id,
-        current_location: {
-          type: "Point",
-          coordinates: [0, 0], // Default location if not provided
-        },
-      });
-
-      await passengerDetails.save();
+    // Check if OTP validation was successful
+    if (
+      validateData.data.responseCode !== "200" ||
+      validateData.data.verificationStatus !== "VERIFICATION_COMPLETED"
+    ) {
+      return res.status(400).json(new ApiResponse(400, null, "Invalid OTP"));
     }
 
-    const msg = {
-      role: "passenger",
-      isNewPassenger: !passengerDetails,
-      phone: user.phone,
-      accessToken,
-      refreshToken,
-      passengerDetails,
-    };
-    return res.status(200).json(new ApiResponse(200, msg, "OTP Verified"));
+    // If the OTP is valid, proceed
+    user.isVerified = true;
+    await user.save();
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+      user._id
+    );
+
+    if (user.isDriver) {
+      // If the user is a driver, simply verify OTP without creating new records
+      const driverDetails = await Driver.findOne({ phone });
+
+      const msg = {
+        role: "driver",
+        isNewDriver: !driverDetails,
+        phone: user.phone,
+        accessToken,
+        refreshToken,
+        driverDetails: driverDetails || {},
+      };
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, msg, "OTP verified for driver"));
+    } else {
+      // If the user is not a driver (i.e., a passenger)
+      let passengerDetails = await Rider.findOne({ phone });
+
+      if (!passengerDetails) {
+        // Create a new rider profile only if it's a new user
+        passengerDetails = new Rider({
+          name: "Rider", // Default name, can be updated later
+          phone,
+          userId: user._id,
+          current_location: {
+            type: "Point",
+            coordinates: [0, 0], // Default coordinates
+          },
+        });
+
+        await passengerDetails.save();
+      }
+
+      const msg = {
+        role: "passenger",
+        isNewPassenger: !passengerDetails,
+        phone: user.phone,
+        accessToken,
+        refreshToken,
+        passengerDetails,
+      };
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, msg, "OTP verified for rider"));
+    }
+  } catch (error) {
+    console.error("Error validating OTP:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to validate OTP"));
   }
 });
 
@@ -259,46 +303,45 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
 });
 
 // Resend OTP Function
-export const resendOTP = asyncHandler(async (req, res) => {
-  const { phone } = req.body;
+export const resendOtp = asyncHandler(async (req, res) => {
+  const { phone, isDriver } = req.body;
+
   if (!phone) {
     return res
       .status(400)
       .json(new ApiResponse(400, null, "Phone number is required"));
   }
 
-  const { allowed, remainingTime } = checkRateLimit(phone);
-  if (!allowed) {
-    return res
-      .status(429)
-      .json(
-        new ApiResponse(
-          429,
-          null,
-          'Too many requests. Try again in ${Math.ceil(remainingTime / 60000)} minutes.'
-        )
-      );
+  let user = await User.findOne({ phone });
+
+  if (!user) {
+    return res.status(404).json(new ApiResponse(404, null, "User not found"));
   }
 
-  let user = await User.findOne({ phone });
-  const newOtp = generateOtp();
+  // Reset the isVerified flag to false
+  user.isVerified = false;
+  await user.save();
 
-  if (user) {
-    user.otp = newOtp;
-    user.isVerified = false;
-    await user.save();
-    // Send OTP via Twilio
-    // await sendOtpViaTwilio(phone, newOtp);
-    // Execute Standalone Test
-    // testSendSms(newOtp);
+  // Send OTP via Message Central
+  try {
+    const otpResponse = await sendOtpViaMessageCentral(phone);
+    const otpCredentials = JSON.parse(otpResponse);
+
+    // Prepare response data
+    const data = {
+      role: user.isDriver ? "driver" : "passenger",
+      phone: user.phone,
+      otpdata: otpCredentials.data,
+    };
 
     return res
       .status(200)
-      .json(new ApiResponse(200, newOtp, "OTP Sent Successfully"));
-  } else {
+      .json(new ApiResponse(200, data, "OTP resent successfully"));
+  } catch (error) {
+    console.error("Error resending OTP:", error.message);
     return res
-      .status(404)
-      .json(new ApiResponse(404, null, "Invalid Phone number"));
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to resend OTP"));
   }
 });
 

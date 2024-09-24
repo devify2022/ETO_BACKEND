@@ -23,7 +23,7 @@ export const sendOtpViaMessageCentral = async (phone) => {
         console.error("Error sending OTP via Message Central:", error.message);
         reject(new ApiError(500, "Failed to send OTP"));
       } else {
-        console.log("OTP sent successfully:", response.body);
+        // console.log("OTP sent successfully:", response.body);
         resolve(response.body); // Return the response if needed
       }
     });
@@ -46,7 +46,7 @@ export const validateOtpViaMessageCentral = async (phone, verificationId, code) 
         console.error("Error validating OTP via Message Central:", error.message);
         reject(new ApiError(500, "Failed to validate OTP"));
       } else {
-        console.log("OTP validation successful:", response.body);
+        // console.log("OTP validation successful:", response.body);
         resolve(response.body); // Return the response if needed
       }
     });
