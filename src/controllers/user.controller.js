@@ -3,15 +3,14 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { User } from "../models/user.model.js";
 import jwt from "jsonwebtoken";
-import generateOtp from "../utils/otpGenerate.js";
-import checkRateLimit from "../utils/checkRateLimit.js";
 import { Rider } from "../models/rider.model.js";
 import { Driver } from "../models/driver.model.js";
 import {
   sendOtpViaMessageCentral,
   validateOtpViaMessageCentral,
 } from "../utils/sentOtp.js";
-// import { sendOtpViaTwilio, testSendSms } from "../utils/sentOtpViaTwillio.js";
+
+
 
 // Generate Access and Refresh Tokens
 const generateAccessAndRefreshToken = async (userId) => {
@@ -42,6 +41,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 export const loginAndSendOtp = asyncHandler(async (req, res) => {
   const { phone, isDriver } = req.body;
 
+  // Validate input
   if (!phone) {
     return res
       .status(400)
@@ -51,6 +51,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
   let role = null;
   let userDetails = null;
   let otpResponse = null;
+  let otpCredentials = null;
 
   // Determine role and find existing user details (Driver or Passenger)
   if (isDriver) {
@@ -64,7 +65,6 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
   let user = await User.findOne({ phone });
 
   if (userDetails) {
-    // If the user exists in either Driver or Passenger collection
     if (!user) {
       return res.status(404).json(new ApiResponse(404, null, "User not found"));
     }
@@ -78,30 +78,64 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
     user.isVerified = false;
     await user.save();
 
-    // Send OTP via Message Central
     try {
+      // Send OTP via Message Central
       otpResponse = await sendOtpViaMessageCentral(phone);
+
+      // Handle response for OTP service
+      if (otpResponse) {
+        // If response is a string, try to parse it
+        if (typeof otpResponse === "string") {
+          try {
+            otpCredentials = JSON.parse(otpResponse);
+          } catch (error) {
+            console.error("Error parsing OTP response:", error.message);
+            return res
+              .status(500)
+              .json(new ApiResponse(500, null, "Error parsing OTP response"));
+          }
+        } else {
+          otpCredentials = otpResponse; // Use directly if it's already an object
+        }
+
+        // Check if the OTP request was successful
+        if (otpCredentials?.responseCode !== 200) {
+          return res
+            .status(400)
+            .json(
+              new ApiResponse(
+                400,
+                otpCredentials,
+                `OTP request failed: ${otpCredentials.message || "Unknown error"}`
+              )
+            );
+        }
+
+        const data = {
+          role,
+          accessToken,
+          refreshToken,
+          userDetails: userDetails || {}, // Send user details if available
+          otpdata: otpCredentials.data,
+        };
+
+        return res
+          .status(200)
+          .json(new ApiResponse(200, data, "Logged in successfully, OTP sent"));
+      } else {
+        return res
+          .status(500)
+          .json(new ApiResponse(500, null, "No response from OTP service"));
+      }
     } catch (error) {
+      console.error("Error sending OTP:", error.message);
       return res
         .status(500)
         .json(new ApiResponse(500, null, "Failed to send OTP"));
     }
-
-    const data = {
-      role,
-      accessToken,
-      refreshToken,
-      userDetails: userDetails || {}, // Send user details if available
-      otpdata: otpResponse.data,
-    };
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, data, "Logged in successfully, OTP sent"));
   } else {
     // Handle new user registration
     if (user) {
-      // Check if the existing user role (isDriver) conflicts with the login attempt
       if (user.isDriver !== isDriver) {
         return res
           .status(409)
@@ -114,45 +148,78 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
           );
       }
 
-      // Reset verification status
       user.isVerified = false;
       await user.save();
     } else {
-      // Create a new user with the provided role and unverified status
+      // Create a new user
       user = new User({
         phone,
         isVerified: false,
         isDriver,
-        isAdmin: false, // Assuming normal users are not admins by default
+        isAdmin: false,
       });
 
       await user.save();
     }
 
-    // Send OTP via Message Central
     try {
+      // Send OTP via Message Central
       otpResponse = await sendOtpViaMessageCentral(phone);
+
+      // Handle response for OTP service
+      if (otpResponse) {
+        // If response is a string, try to parse it
+        if (typeof otpResponse === "string") {
+          try {
+            otpCredentials = JSON.parse(otpResponse);
+          } catch (error) {
+            console.error("Error parsing OTP response:", error.message);
+            return res
+              .status(500)
+              .json(new ApiResponse(500, null, "Error parsing OTP response"));
+          }
+        } else {
+          otpCredentials = otpResponse; // Use directly if it's already an object
+        }
+
+        // Check if the OTP request was successful
+        if (otpCredentials?.responseCode !== 200) {
+          return res
+            .status(400)
+            .json(
+              new ApiResponse(
+                400,
+                otpCredentials,
+                `OTP request failed: ${otpCredentials.message || "Unknown error"}`
+              )
+            );
+        }
+
+        const newData = {
+          user,
+          otpdata: otpCredentials.data,
+        };
+
+        return res
+          .status(200)
+          .json(new ApiResponse(200, newData, "OTP sent successfully"));
+      } else {
+        return res
+          .status(500)
+          .json(new ApiResponse(500, null, "No response from OTP service"));
+      }
     } catch (error) {
+      console.error("Error sending OTP:", error.message);
       return res
         .status(500)
         .json(new ApiResponse(500, null, "Failed to send OTP"));
     }
-
-    const newData = {
-      user,
-      otpdata: otpResponse.data,
-    };
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, newData, "OTP sent successfully"));
   }
 });
 
 // OTP Verification Controller
 export const verifyOtp = asyncHandler(async (req, res) => {
   const { phone, verificationId, code } = req.body;
-  let validateData = null;
 
   // Check if all required fields are present
   if (!phone || !verificationId || !code) {
@@ -182,11 +249,35 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       code
     );
 
-    // Check if the response is already an object
+    // console.log("Validation Response:", validationResponse); // Log the entire response
+
+    // Check if the response is a string and parse if necessary
+    let validateData;
     if (typeof validationResponse === "string") {
-      validateData = JSON.parse(validationResponse); // Parse only if it's a string
+      try {
+        validateData = JSON.parse(validationResponse);
+      } catch (error) {
+        console.error("Error parsing validation response:", error.message);
+        return res
+          .status(500)
+          .json(
+            new ApiResponse(500, null, "Invalid response from OTP service")
+          );
+      }
     } else {
-      validateData = validationResponse; // Use directly if it's already an object
+      validateData = validationResponse;
+    }
+
+    // Check if the response has the expected structure
+    if (
+      !validateData?.data ||
+      !validateData.data.responseCode ||
+      !validateData.data.verificationStatus
+    ) {
+      console.error("Unexpected response structure:", validateData);
+      return res
+        .status(500)
+        .json(new ApiResponse(500, null, "Invalid response from OTP service"));
     }
 
     // Check if OTP validation was successful
@@ -194,6 +285,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       validateData.data.responseCode !== "200" ||
       validateData.data.verificationStatus !== "VERIFICATION_COMPLETED"
     ) {
+      console.error("OTP validation failed:", validateData.data);
       return res.status(400).json(new ApiResponse(400, null, "Invalid OTP"));
     }
 
@@ -255,10 +347,13 @@ export const verifyOtp = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, msg, "OTP verified for rider"));
     }
   } catch (error) {
-    console.error("Error validating OTP:", error);
-    return res
-      .status(500)
-      .json(new ApiResponse(500, null, "Failed to validate OTP"));
+    console.error("Error validating OTP:", error.message);
+    console.error("Full error object:", error); // Log the full error object for more details
+
+    // Return a more detailed error message if possible
+    const errorMessage =
+      error.response?.data?.message || "Failed to validate OTP";
+    return res.status(500).json(new ApiResponse(500, null, errorMessage));
   }
 });
 
