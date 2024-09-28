@@ -96,29 +96,3 @@ export const validateOtpViaMessageCentral = async (
   });
 };
 
-// Function to Validate OTP via Message Central
-// Function to Validate OTP via Message Central
-// export const validateOtpViaMessageCentral = async (phone, verificationId, code, customerId, authToken) => {
-//   const options = {
-//     method: 'GET',
-//     url: `https://cpaas.messagecentral.com/verification/v3/validateOtp?countryCode=91&mobileNumber=${phone}&verificationId=${verificationId}&customerId=${customerId}&code=${code}`,
-//     headers: {
-//       'authToken': authToken,
-//     },
-//   };
-
-//   return new Promise((resolve, reject) => {
-//     request(options, function (error, response) {
-//       if (error) {
-//         console.error("Error validating OTP via Message Central:", error.message);
-//         reject(new ApiError(500, "Failed to validate OTP"));
-//       } else if (response.statusCode !== 200) {
-//         console.error("Failed to validate OTP:", response.body);
-//         reject(new ApiError(response.statusCode, "Failed to validate OTP: " + response.body));
-//       } else {
-//         console.log("OTP validation successful:", response.body);
-//         resolve(response.body); // Return the response if needed
-//       }
-//     });
-//   });
-// };

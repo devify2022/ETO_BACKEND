@@ -17,14 +17,14 @@ const server = http.createServer(app);
 // Set up Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000", // Set your React app origin
+    origin: "*", // Set your React app origin
     credentials: true,
   },
 });
 
 app.use(
   cors({
-    origin: "http://localhost:3000", // Set your React app origin
+    origin: "*", // Set your React app origin
     credentials: true,
   })
 );
