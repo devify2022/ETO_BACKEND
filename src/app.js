@@ -18,14 +18,14 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "*", // Set your React app origin
-    credentials: true,
+    // credentials: true,
   },
 });
 
 app.use(
   cors({
     origin: "*", // Set your React app origin
-    credentials: true,
+    // credentials: true,
   })
 );
 
