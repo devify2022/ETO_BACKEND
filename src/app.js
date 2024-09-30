@@ -17,15 +17,15 @@ const server = http.createServer(app);
 // Set up Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: "*", // Set your React app origin
-    // credentials: true,
+    origin: "http://localhost:8081", // Set your React app origin
+    credentials: true,
   },
 });
 
 app.use(
   cors({
-    origin: "*", // Set your React app origin
-    // credentials: true,
+    origin: "http://localhost:8081", // Set your React app origin
+    credentials: true,
   })
 );
 
@@ -56,11 +56,9 @@ app.get("/", (req, res) => {
 });
 
 // Socket.IO connection setup
-let socketInstance = null;
 
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
-  socketInstance = socket;
 
   // Register Driver Socket ID with location update and isActive check
   socket.on("registerDriver", async (data) => {
@@ -126,6 +124,7 @@ io.on("connection", (socket) => {
 
   // Register Rider Socket ID with location update
   socket.on("registerRider", async (data) => {
+    console.log(data);
     const { riderId, lat, lng } = data;
 
     if (!riderId || !lat || !lng) {
@@ -229,25 +228,11 @@ io.on("connection", (socket) => {
     } catch (error) {
       console.error("Error removing driver's socketId:", error.message);
     }
-    socketInstance = null;
   });
-
-  // Ping Pong Pattern
-  socket.emit("pong", "akter");
 
   socket.on("addition", (arg1, arg2, callback) => {
     callback({ result: arg1 + arg2 });
   });
-});
-
-// Ping endpoint
-app.post("/send-ping", (req, res) => {
-  if (socketInstance) {
-    socketInstance.emit("ping", "ping from server");
-    res.status(200).send("ping sent");
-  } else {
-    res.status(500).send("No socket instance");
-  }
 });
 
 // Error handling middleware
@@ -259,5 +244,5 @@ export { app, server };
 // Start the server
 const PORT = 8080;
 server.listen(PORT, () => {
-  console.log(`Socket is running on http://localhost:${PORT}`);
+  console.log(`Socket is running on http://192.168.31.227:${PORT}`);
 });
