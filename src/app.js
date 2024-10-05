@@ -22,7 +22,7 @@ app.use(
 );
 
 // Other middleware and route setup
-app.use(rateLimitMiddleware);
+// app.use(rateLimitMiddleware);
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
@@ -56,5 +56,5 @@ export { app, server };
 // Start the server
 const PORT = 8080;
 server.listen(PORT, () => {
-  console.log(`Socket is running on http://192.168.31.227:${PORT}`);
+  console.log(`Socket is running on http://localhost:${PORT}`);
 });
