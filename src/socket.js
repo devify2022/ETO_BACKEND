@@ -32,7 +32,7 @@ export const setupSocketIO = (server) => {
         if (driver.isActive) {
           await Driver.findByIdAndUpdate(driverId, {
             socketId: socket.id,
-            location: {
+            current_location: {
               type: "Point",
               coordinates: [lng, lat],
             },
@@ -76,7 +76,7 @@ export const setupSocketIO = (server) => {
 
     // Register Rider Socket ID with location update
     socket.on("registerRider", async (data) => {
-      console.log(data);
+      // console.log(data);
       const { riderId, lat, lng } = data;
 
       if (!riderId || !lat || !lng) {
