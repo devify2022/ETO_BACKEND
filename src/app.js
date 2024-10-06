@@ -39,7 +39,7 @@ app.use("/eto/api/v1/auth", userRouter);
 app.use("/eto/api/v1/driver", driverRouter);
 app.use("/eto/api/v1/rider", riderRouter);
 app.use("/eto/api/v1/rides", createRideDetailsRouter(io));
-app.use("/eto/api/v1/eto", etoRouter);
+// app.use("/eto/api/v1/eto", etoRouter);
 app.use("/", paymentRouter);
 
 // Home route
@@ -56,5 +56,5 @@ export { app, server };
 // Start the server
 const PORT = 8080;
 server.listen(PORT, () => {
-  console.log(`Socket is running on http://192.168.31.227:${PORT}`);
+  console.log(`Socket is running on localhost:${PORT}`);
 });
