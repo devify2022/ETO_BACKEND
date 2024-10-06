@@ -10,8 +10,6 @@ import {
   validateOtpViaMessageCentral,
 } from "../utils/sentOtp.js";
 
-
-
 // Generate Access and Refresh Tokens
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -301,7 +299,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     // If the user is a driver
     if (user.isDriver) {
       const driverDetails = await Driver.findOne({ phone });
-      console.log(driverDetails)
+      console.log(driverDetails);
 
       const msg = {
         role: "driver",
@@ -309,7 +307,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
         phone: user.phone,
         accessToken,
         refreshToken,
-        driverDetails: driverDetails || {}, // Send driver details if available
+        userDetails: driverDetails || user, // Send driver details if available
       };
 
       return res
@@ -340,7 +338,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
         phone: user.phone,
         accessToken,
         refreshToken,
-        passengerDetails,
+        userDetails: passengerDetails || user,
       };
 
       return res
