@@ -22,7 +22,7 @@ app.use(
 );
 
 // Other middleware and route setup
-// app.use(rateLimitMiddleware);
+app.use(rateLimitMiddleware);
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
@@ -44,7 +44,7 @@ app.use("/", paymentRouter);
 
 // Home route
 app.get("/", (req, res) => {
-  res.send("Welcome to ETO API!");
+  res.send("Welcome to EASY TOTO OPERATOR (TRIAL) API!");
 });
 
 // Error handling middleware
