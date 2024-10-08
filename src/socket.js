@@ -16,6 +16,7 @@ export const setupSocketIO = (server) => {
 
     // Register Driver Socket ID with location update and isActive check
     socket.on("registerDriver", async (data) => {
+      // console.log(data)
       const { driverId, lat, lng } = data;
       if (!driverId || !lat || !lng) {
         return socket.emit("error", {
@@ -38,9 +39,9 @@ export const setupSocketIO = (server) => {
             },
           });
 
-          console.log(
-            `Driver ${driverId} connected with socket ${socket.id} and location updated`
-          );
+          // console.log(
+          //   `Driver ${driverId} connected with socket ${socket.id} and location updated`
+          // );
 
           // Emit driver's updated location to the rider (if a ride is ongoing)
           const ride = await RideDetails.findOne({
