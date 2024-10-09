@@ -233,9 +233,12 @@ export const acceptRide = (io) =>
       });
 
       await newRide.save();
-      console.log(rider.socketId)
+      // console.log("rider", rider.socketId);
+      // console.log("driver", driver.socketId);
 
       if (rider.socketId) {
+        // console.log("hello")
+        console.log("Emitting rideAccepted to rider:", rider.socketId);
         io.to(rider.socketId).emit("rideAccepted", {
           driverId: driver._id,
           rideId: newRide._id,
@@ -351,7 +354,7 @@ export const rejectRide = (io) =>
 // Verify Pickup OTP
 export const verifyPickUpOtp = asyncHandler(async (req, res) => {
   const { rideId, pickupOtp } = req.body;
-  console.log(req.body);
+  // console.log(req.body);
 
   // Check if the required fields are provided
   if (!rideId || !pickupOtp) {
@@ -371,7 +374,7 @@ export const verifyPickUpOtp = asyncHandler(async (req, res) => {
       return res.status(404).json(new ApiResponse(404, null, "Ride not found"));
     }
 
-    console.log(ride);
+    // console.log(ride);
 
     // Verify the pickup OTP
     if (ride.pickup_otp !== pickupOtp) {
@@ -413,7 +416,7 @@ export const verifyPickUpOtp = asyncHandler(async (req, res) => {
 // Verify Drop OTP
 export const verifyDropOtp = asyncHandler(async (req, res) => {
   const { rideId, dropOtp } = req.body;
-  console.log(req.body);
+  // console.log(req.body);
 
   // Check if the required fields are provided
   if (!rideId || !dropOtp) {
@@ -492,7 +495,7 @@ export const cancelRide = (io) =>
       const ride = await RideDetails.findById(rideId);
 
       // Log the retrieved ride
-      console.log("Retrieved ride:", ride);
+      // console.log("Retrieved ride:", ride);
 
       // Check if the ride exists
       if (!ride) {

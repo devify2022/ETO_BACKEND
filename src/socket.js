@@ -59,7 +59,7 @@ export const setupSocketIO = (server) => {
             }
           }
         } else {
-          console.log(`Driver ${driverId} is not active, location not updated`);
+          // console.log(`Driver ${driverId} is not active, location not updated`);
           return socket.emit("error", {
             message: "Driver is not active, cannot update location",
           });
@@ -94,9 +94,9 @@ export const setupSocketIO = (server) => {
             coordinates: [lng, lat],
           },
         });
-        console.log(
-          `Rider ${riderId} connected with socket ${socket.id} and location updated`
-        );
+        // console.log(
+        //   `Rider ${riderId} connected with socket ${socket.id} and location updated`
+        // );
 
         // Emit rider's updated location to the driver (if a ride is ongoing)
         const ride = await RideDetails.findOne({
@@ -126,7 +126,7 @@ export const setupSocketIO = (server) => {
 
     // Accept Ride Event
     socket.on("acceptRide", async (data) => {
-      console.log(data);
+      // console.log(data);
       const { rideId, driverId } = data;
 
       if (!rideId || !driverId) {
