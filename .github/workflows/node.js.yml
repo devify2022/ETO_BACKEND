@@ -28,7 +28,7 @@ jobs:
     - run: npm ci
 
     - run: |
-        touch .env
+        touch sampleEnv.txt
         echo "${{ secrets.PROD_ENV_FILE }}" > .env
 
     - run: pm2 restart ETOBACKENDAPI

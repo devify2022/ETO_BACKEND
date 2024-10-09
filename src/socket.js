@@ -126,6 +126,7 @@ export const setupSocketIO = (server) => {
 
     // Accept Ride Event
     socket.on("acceptRide", async (data) => {
+      console.log(data);
       const { rideId, driverId } = data;
 
       if (!rideId || !driverId) {
@@ -136,34 +137,34 @@ export const setupSocketIO = (server) => {
 
       try {
         // Update ride status in the database
-        const ride = await RideDetails.findByIdAndUpdate(
+        await RideDetails.findByIdAndUpdate(
           rideId,
           { driverId, isRide_started: true, started_time: new Date() },
           { new: true }
         );
 
-        if (ride && ride.riderId) {
-          // Fetch the rider's socketId
-          const rider = await Rider.findById(ride.riderId);
-          const riderSocketId = rider.socketId;
+        // if (ride && ride.riderId) {
+        //   // Fetch the rider's socketId
+        //   const rider = await Rider.findById(ride.riderId);
+        //   const riderSocketId = rider.socketId;
 
-          if (riderSocketId) {
-            // Notify the rider about the ride acceptance
-            io.to(riderSocketId).emit("rideAccepted", {
-              driverId,
-              rideId,
-              message: "Your ride has been accepted.",
-            });
-            console.log(
-              `Ride accepted by driver ${driverId}. Notified rider ${rider._id}`
-            );
-          } else {
-            console.error("Rider socketId not found");
-            socket.emit("error", { message: "Rider not connected" });
-          }
-        } else {
-          socket.emit("error", { message: "Ride not found" });
-        }
+        //   if (riderSocketId) {
+        //     // Notify the rider about the ride acceptance
+        //     io.to(riderSocketId).emit("rideAccepted", {
+        //       driverId,
+        //       rideId,
+        //       message: "Your ride has been accepted.",
+        //     });
+        //     console.log(
+        //       `Ride accepted by driver ${driverId}. Notified rider ${rider._id}`
+        //     );
+        //   } else {
+        //     console.error("Rider socketId not found");
+        //     socket.emit("error", { message: "Rider not connected" });
+        //   }
+        // } else {
+        //   socket.emit("error", { message: "Ride not found" });
+        // }
       } catch (error) {
         console.error("Error starting ride:", error.message);
         socket.emit("error", { message: "Failed to start ride" });

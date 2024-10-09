@@ -13,6 +13,10 @@ const createRouterWithSocket = (io) => {
   router
     .route("/acceptRide")
     .post((req, res, next) => acceptRide(io)(req, res, next));
+
+  router
+    .route("/rejectRide")
+    .delete((req, res, next) => rejectRide(io)(req, res, next));
   router
     .route("/findDrivers")
     .post((req, res, next) => findAvailableDrivers(io)(req, res, next));

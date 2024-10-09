@@ -56,5 +56,5 @@ export { app, server };
 // Start the server
 const PORT = 8080;
 server.listen(PORT, () => {
-  console.log(`Socket is running on localhost:${PORT}`);
+  console.log(`Socket is running on 192.168.31.227:${PORT}`);
 });
