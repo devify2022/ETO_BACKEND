@@ -44,7 +44,7 @@ app.use("/", paymentRouter);
 
 // Home route
 app.get("/", (req, res) => {
-  res.send("Welcome to EASY TOTO OPERATOR (TRIAL) API!");
+  res.send("Welcome to EASY (TRIAL) API!");
 });
 
 // Error handling middleware
