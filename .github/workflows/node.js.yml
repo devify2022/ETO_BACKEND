@@ -31,4 +31,4 @@ jobs:
         touch sampleEnv.txt
         echo "${{ secrets.PROD_ENV_FILE }}" > .env
 
-    - run: pm2 restart ETOBACKENDAPI
+    - run: pm2 restart myApp
