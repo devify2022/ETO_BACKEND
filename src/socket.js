@@ -6,7 +6,7 @@ import { RideDetails } from "./models/rideDetails.model.js";
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: "http://localhost:8081", // Set your React app origin
+      origin: "http://192.168.31.227:8081", // Set your React app origin
       credentials: true,
     },
   });
@@ -139,7 +139,7 @@ export const setupSocketIO = (server) => {
         // Update ride status in the database
         await RideDetails.findByIdAndUpdate(
           rideId,
-          { driverId, isRide_started: true, started_time: new Date() },
+          { driverId, isRide_accept: true, isOn: true },
           { new: true }
         );
 

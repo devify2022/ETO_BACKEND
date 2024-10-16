@@ -229,7 +229,6 @@ export const acceptRide = (io) =>
         admin_percentage: adminPercentage,
         admin_profit: adminAmount,
         driver_profit: driverProfit,
-        isRide_accept: true,
       });
 
       await newRide.save();
@@ -392,6 +391,7 @@ export const verifyPickUpOtp = asyncHandler(async (req, res) => {
     driver.current_ride_id = ride._id;
     await driver.save();
 
+    ride.isPickUp_verify = true;
     ride.isRide_started = true;
     ride.started_time = Date.now();
     await ride.save();
@@ -456,6 +456,7 @@ export const verifyDropOtp = asyncHandler(async (req, res) => {
     driver.ride_ids.push(new mongoose.Types.ObjectId(rideId));
     await driver.save();
 
+    ride.isOn = false;
     ride.isRide_started = false;
     ride.isRide_ended = true;
     ride.ride_end_time = Date.now();

@@ -172,15 +172,15 @@ export const getCurrentRide = asyncHandler(async (req, res) => {
         .json(new ApiResponse(404, null, "Driver not found"));
     }
 
-    // Check if the driver is on a ride
-    if (!driver.current_ride_id) {
-      return res
-        .status(404)
-        .json(new ApiResponse(404, null, "No ongoing ride for this driver"));
-    }
+    // // Check if the driver is on a ride
+    // if (!driver.current_ride_id) {
+    //   return res
+    //     .status(404)
+    //     .json(new ApiResponse(404, null, "No ongoing ride for this driver"));
+    // }
 
     // Fetch the current ride details
-    const currentRide = await RideDetails.findById(driver.current_ride_id);
+    const currentRide = await RideDetails.findOne({ driverId: id, isOn: true });
     if (!currentRide) {
       return res
         .status(404)

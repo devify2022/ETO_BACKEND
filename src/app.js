@@ -16,7 +16,7 @@ const io = setupSocketIO(server);
 
 app.use(
   cors({
-    origin: "http://localhost:8081", // Set your React app origin
+    origin: "http://192.168.31.227:8081", // Set your React app origin
     credentials: true,
   })
 );
@@ -56,5 +56,5 @@ export { app, server };
 // Start the server
 const PORT = 8080;
 server.listen(PORT, () => {
-  console.log(`Socket is running on localhost:${PORT}`);
+  console.log(`Socket is running on 192.168.31.227:${PORT}`);
 });

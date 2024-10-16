@@ -66,8 +66,8 @@ export const validateOtpViaMessageCentral = async (
         );
         reject(new ApiError(500, "Failed to validate OTP"));
       } else {
-        console.log("Response Status Code:", response.statusCode); // Log the status code
-        console.log("Response Body:", response.body); // Log the response body for debugging
+        // console.log("Response Status Code:", response.statusCode); // Log the status code
+        // console.log("Response Body:", response.body); // Log the response body for debugging
 
         try {
           const responseBody = JSON.parse(response.body);

@@ -74,7 +74,7 @@ const rideDetailsSchema = new Schema({
   },
   payment_mode: {
     type: String,
-    enum: ["cash", "card", "online"], // Example of possible payment modes
+    enum: ["cash", "card", "online"],
   },
   isPayment_done: {
     type: Boolean,
@@ -93,17 +93,28 @@ const rideDetailsSchema = new Schema({
     default: false,
   },
   started_time: {
-    type: Date, // Use Date type for time
+    type: Date,
   },
   drop_time: {
-    type: Date, // Use Date type for time
+    type: Date,
   },
   ride_end_time: {
-    // Add this field to store the end time
     type: Date,
   },
   total_duration: {
-    type: String, // Duration as a string (e.g., "15 mins")
+    type: String,
+  },
+  isOn: {
+    type: Boolean,
+    default: false, // Indicates if the ride is currently active
+  },
+  isPickUp_verify: {
+    type: Boolean,
+    default: false, // Indicates if pickup OTP is verified
+  },
+  isDrop_verify: {
+    type: Boolean,
+    default: false, // Indicates if drop OTP is verified
   },
 });
 
