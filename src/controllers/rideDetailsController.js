@@ -457,6 +457,7 @@ export const verifyDropOtp = asyncHandler(async (req, res) => {
     await driver.save();
 
     ride.isOn = false;
+    ride.isDrop_verify = true;
     ride.isRide_started = false;
     ride.isRide_ended = true;
     ride.ride_end_time = Date.now();
