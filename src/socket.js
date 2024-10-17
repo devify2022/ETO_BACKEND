@@ -51,23 +51,13 @@ export const setupSocketIO = (server) => {
             },
           });
 
-          // console.log(
-          //   `Driver ${driverId} connected with socket ${socket.id} and location updated`
-          // );
+          console.log(
+            `Driver ${driverId} connected with socket ${socket.id} and location updated`
+          );
 
           // Emit driver's updated location to the rider (if a ride is ongoing)
 
-          const rider = await Rider.findById(ride.riderId);
-          if (rider && rider.socketId) {
-            console.log(
-              `Emitting location to rider socket: ${rider.socketId}`
-            );
-            io.to(rider.socketId).emit("driverLocationUpdate", {
-              driverId,
-              location: { lat, lng },
-              message: "Driver's location updated",
-            });
-          }
+          
         } else {
           // console.log(`Driver ${driverId} is not active, location not updated`);
           return socket.emit("error", {
