@@ -30,6 +30,18 @@ export const setupSocketIO = (server) => {
           return socket.emit("error", { message: "Driver not found" });
         }
 
+        console.log(`Emitting location to driver socket: ${driver.socketId}`);
+        io.to(driver.socketId).emit("driverLocation", {
+          driverId,
+          location: { lat, lng },
+          message: "Driver's location updated",
+        });
+
+        const ride = await RideDetails.findOne({
+          driverId,
+          isRide_started: true,
+        });
+
         if (driver.isActive) {
           await Driver.findByIdAndUpdate(driverId, {
             socketId: socket.id,
@@ -44,19 +56,17 @@ export const setupSocketIO = (server) => {
           // );
 
           // Emit driver's updated location to the rider (if a ride is ongoing)
-          const ride = await RideDetails.findOne({
-            driverId,
-            isRide_started: true,
-          });
-          if (ride && ride.riderId) {
-            const rider = await Rider.findById(ride.riderId);
-            if (rider && rider.socketId) {
-              io.to(rider.socketId).emit("driverLocationUpdate", {
-                driverId,
-                location: { lat, lng },
-                message: "Driver's location updated",
-              });
-            }
+
+          const rider = await Rider.findById(ride.riderId);
+          if (rider && rider.socketId) {
+            console.log(
+              `Emitting location to rider socket: ${rider.socketId}`
+            );
+            io.to(rider.socketId).emit("driverLocationUpdate", {
+              driverId,
+              location: { lat, lng },
+              message: "Driver's location updated",
+            });
           }
         } else {
           // console.log(`Driver ${driverId} is not active, location not updated`);
