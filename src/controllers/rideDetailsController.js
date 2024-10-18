@@ -10,7 +10,7 @@ import mongoose from "mongoose";
 // Looking Drivers for Ride
 export const findAvailableDrivers = (io) =>
   asyncHandler(async (req, res, next) => {
-    const { riderId, dropLocation, totalKm } = req.body;
+    const { riderId, dropLocation, pickLocation, totalKm } = req.body;
     const proximityRadius = 5; // Define radius to search for nearby drivers (in kilometers)
     const perKmCharge = 10; // Charge per kilometer
     const adminProfitPercentage = 40; // Admin profit percentage (40%)
@@ -21,14 +21,14 @@ export const findAvailableDrivers = (io) =>
         .json(new ApiResponse(400, null, "Rider ID is required"));
     }
 
-    if (!dropLocation || !totalKm) {
+    if (!pickLocation || !dropLocation || !totalKm) {
       return res
         .status(400)
         .json(
           new ApiResponse(
             400,
             null,
-            "Drop location and total kilometers are required"
+            "Pickup location, drop location, and total kilometers are required"
           )
         );
     }
@@ -42,32 +42,14 @@ export const findAvailableDrivers = (io) =>
           .json(new ApiResponse(404, null, "Rider not found"));
       }
 
-      const { current_location } = rider;
-
-      if (
-        !current_location ||
-        !current_location.coordinates ||
-        current_location.coordinates.length !== 2
-      ) {
-        return res
-          .status(400)
-          .json(
-            new ApiResponse(
-              400,
-              null,
-              "Rider's current location is not set or invalid"
-            )
-          );
-      }
-
-      const riderCoordinates = current_location.coordinates;
+      const pickupCoordinates = [pickLocation.longitude, pickLocation.latitude]; // Use [longitude, latitude] format for GeoJSON
 
       const availableDrivers = await Driver.find({
         current_location: {
           $near: {
             $geometry: {
               type: "Point",
-              coordinates: riderCoordinates,
+              coordinates: pickupCoordinates,
             },
             $maxDistance: proximityRadius * 1000, // Convert km to meters
           },
@@ -75,8 +57,6 @@ export const findAvailableDrivers = (io) =>
         isActive: true,
         is_on_ride: false,
       });
-
-      // console.log(availableDrivers)
 
       if (availableDrivers.length === 0) {
         return res
@@ -92,7 +72,7 @@ export const findAvailableDrivers = (io) =>
         if (driver.socketId) {
           io.to(driver.socketId).emit("newRideRequest", {
             riderId,
-            riderLocation: riderCoordinates,
+            riderLocation: pickupCoordinates,
             driverId: driver._id,
             driverLocation: driver.current_location.coordinates,
             dropLocation,
@@ -111,8 +91,6 @@ export const findAvailableDrivers = (io) =>
         driverProfit,
         totalKm,
       };
-
-      // console.log(resData)
 
       return res
         .status(200)
@@ -240,7 +218,9 @@ export const acceptRide = (io) =>
         console.log("Emitting rideAccepted to rider:", rider.socketId);
         io.to(rider.socketId).emit("rideAccepted", {
           driverId: driver._id,
+          riderId: riderId,
           rideId: newRide._id,
+          riderId: newRide.riderId,
           riderLocation: rider.current_location,
           driverLocation: driver.current_location,
           totalPrice: newRide.total_amount,
@@ -252,6 +232,7 @@ export const acceptRide = (io) =>
       if (driver.socketId) {
         io.to(driver.socketId).emit("rideDetails", {
           rideId: newRide._id,
+          riderId: riderId,
           riderLocation: rider.current_location,
           pickupLocation: newRide.pickup_location,
           dropLocation: newRide.drop_location,
@@ -351,134 +332,173 @@ export const rejectRide = (io) =>
   });
 
 // Verify Pickup OTP
-export const verifyPickUpOtp = asyncHandler(async (req, res) => {
-  const { rideId, pickupOtp } = req.body;
-  // console.log(req.body);
+export const verifyPickUpOtp = (io) =>
+  asyncHandler(async (req, res) => {
+    const { rideId, pickupOtp } = req.body;
 
-  // Check if the required fields are provided
-  if (!rideId || !pickupOtp) {
-    return res
-      .status(400)
-      .json(new ApiResponse(400, null, "Ride ID, Pickup OTP are required"));
-  }
-
-  try {
-    // Find the ride by ID
-    const ride = await RideDetails.findById(rideId);
-    const rider = await Rider.findById({ _id: ride.riderId });
-    const driver = await Driver.findOne({ _id: ride.driverId });
-
-    // Check if the ride exists
-    if (!ride) {
-      return res.status(404).json(new ApiResponse(404, null, "Ride not found"));
-    }
-
-    // console.log(ride);
-
-    // Verify the pickup OTP
-    if (ride.pickup_otp !== pickupOtp) {
+    if (!rideId || !pickupOtp) {
       return res
         .status(400)
-        .json(new ApiResponse(400, null, "Invalid Pickup OTP"));
+        .json(
+          new ApiResponse(400, null, "Ride ID and Pickup OTP are required")
+        );
     }
 
-    // Set the ride status to 'on ride' after OTP verification
-    rider.is_on_ride = true;
-    rider.current_ride_id = ride._id;
-    await rider.save();
+    try {
+      // Find the ride, rider, and driver by their IDs
+      const ride = await RideDetails.findById(rideId);
+      if (!ride) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, null, "Ride not found"));
+      }
 
-    driver.is_on_ride = true;
-    driver.current_ride_id = ride._id;
-    await driver.save();
+      const rider = await Rider.findById(ride.riderId);
+      const driver = await Driver.findById(ride.driverId);
 
-    ride.isPickUp_verify = true;
-    ride.isRide_started = true;
-    ride.started_time = Date.now();
-    await ride.save();
+      // Verify the pickup OTP
+      if (ride.pickup_otp !== pickupOtp) {
+        return res
+          .status(400)
+          .json(new ApiResponse(400, null, "Invalid Pickup OTP"));
+      }
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          ride,
-          "OTP verified successfully and ride is now active"
-        )
-      );
-  } catch (error) {
-    console.error("Error verifying OTPs:", error.message);
-    return res
-      .status(500)
-      .json(new ApiResponse(500, null, "Failed to verify OTPs"));
-  }
-});
+      // Set the ride status to 'on ride'
+      rider.is_on_ride = true;
+      rider.current_ride_id = ride._id;
+      await rider.save();
+
+      driver.is_on_ride = true;
+      driver.current_ride_id = ride._id;
+      await driver.save();
+
+      ride.isPickUp_verify = true;
+      ride.isRide_started = true;
+      ride.started_time = Date.now();
+      await ride.save();
+
+      // Emit updates to both the rider and driver
+      if (rider.socketId) {
+        console.log(`sendinggggg data after pickup otp verify ${rider.socketId}`)
+        io.to(rider.socketId).emit("pickupOtpVerifiedToRider", {
+          message: "Pickup OTP verified. Ride is now active.",
+          isRide_started: true,
+          rideId: ride._id,
+        });
+      }
+
+      if (driver.socketId) {
+        io.to(driver.socketId).emit("pickupOtpVerifiedToDriver", {
+          message: "Pickup OTP verified. Ride is now active.",
+          isRide_started: true,
+          rideId: ride._id,
+        });
+      }
+
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            ride,
+            "OTP verified successfully and ride is now active"
+          )
+        );
+    } catch (error) {
+      console.error("Error verifying OTPs:", error.message);
+      return res
+        .status(500)
+        .json(new ApiResponse(500, null, "Failed to verify OTPs"));
+    }
+  });
 
 // Verify Drop OTP
-export const verifyDropOtp = asyncHandler(async (req, res) => {
-  const { rideId, dropOtp } = req.body;
-  // console.log(req.body);
+export const verifyDropOtp = (io) =>
+  asyncHandler(async (req, res) => {
+    const { rideId, dropOtp } = req.body;
 
-  // Check if the required fields are provided
-  if (!rideId || !dropOtp) {
-    return res
-      .status(400)
-      .json(new ApiResponse(400, null, "Ride ID, and Drop OTP are required"));
-  }
-
-  try {
-    // Find the ride by ID
-    const ride = await RideDetails.findById(rideId);
-    const rider = await Rider.findById({ _id: ride.riderId });
-    const driver = await Driver.findOne({ _id: ride.driverId });
-
-    // Check if the ride exists
-    if (!ride) {
-      return res.status(404).json(new ApiResponse(404, null, "Ride not found"));
-    }
-
-    // console.log(ride);
-
-    // Verify the drop OTP
-    if (ride.drop_otp !== dropOtp) {
+    if (!rideId || !dropOtp) {
       return res
         .status(400)
-        .json(new ApiResponse(400, null, "Invalid Drop OTP"));
+        .json(new ApiResponse(400, null, "Ride ID and Drop OTP are required"));
     }
 
-    // Set the ride status to 'on ride' after OTP verification
-    rider.is_on_ride = false;
-    rider.current_ride_id = null;
-    rider.ride_ids.push(new mongoose.Types.ObjectId(rideId));
-    await rider.save();
+    try {
+      // Find the ride, rider, and driver by their IDs
+      const ride = await RideDetails.findById(rideId);
+      if (!ride) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, null, "Ride not found"));
+      }
 
-    driver.is_on_ride = false;
-    driver.current_ride_id = null;
-    driver.ride_ids.push(new mongoose.Types.ObjectId(rideId));
-    await driver.save();
+      const rider = await Rider.findById(ride.riderId);
+      const driver = await Driver.findById(ride.driverId);
 
-    ride.isOn = false;
-    ride.isDrop_verify = true;
-    ride.isRide_started = false;
-    ride.isRide_ended = true;
-    ride.ride_end_time = Date.now();
-    await ride.save();
+      // Verify the drop OTP
+      if (ride.drop_otp !== dropOtp) {
+        return res
+          .status(400)
+          .json(new ApiResponse(400, null, "Invalid Drop OTP"));
+      }
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          ride,
-          "OTP verified successfully and ride is now finished"
-        )
-      );
-  } catch (error) {
-    console.error("Error verifying OTPs:", error.message);
-    return res
-      .status(500)
-      .json(new ApiResponse(500, null, "Failed to verify OTP"));
-  }
-});
+      // Update the rider's status and ride details
+      rider.is_on_ride = false;
+      rider.current_ride_id = null;
+      rider.ride_ids.push(new mongoose.Types.ObjectId(rideId));
+      await rider.save();
+
+      // Update the driver's status and ride details
+      driver.is_on_ride = false;
+      driver.current_ride_id = null;
+      driver.ride_ids.push(new mongoose.Types.ObjectId(rideId));
+      await driver.save();
+
+      // Update the ride status
+      ride.isOn = false;
+      ride.isDrop_verify = true;
+      ride.isRide_started = false;
+      ride.isRide_ended = true;
+      ride.ride_end_time = Date.now();
+      await ride.save();
+
+      // Emit ride completion updates to both the rider and driver
+      if (rider.socketId) {
+        console.log(`emiting ride completed data, ${rider.socketId}`)
+        io.to(rider.socketId).emit("rideCompletedToRider", {
+          message: "Ride completed and OTP verified",
+          isAccept: false,
+          isRide_started: false,
+          isRide_ended: true,
+        });
+      }
+
+      if (driver.socketId) {
+        console.log(`emiting ride completed data, ${driver.socketId}`);
+        io.to(driver.socketId).emit("rideCompletedToDriver", {
+          message: "Ride completed and OTP verified",
+          isAccept: false,
+          isRide_started: false,
+          isRide_ended: true,
+        });
+      }
+
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            ride,
+            "OTP verified successfully and ride is now finished"
+          )
+        );
+    } catch (error) {
+      console.error("Error verifying OTPs:", error.message);
+      return res
+        .status(500)
+        .json(new ApiResponse(500, null, "Failed to verify OTP"));
+    }
+  });
 
 // Cancel ride API
 export const cancelRide = (io) =>

@@ -16,7 +16,7 @@ export const setupSocketIO = (server) => {
 
     // Register Driver Socket ID with location update and isActive check
     socket.on("registerDriver", async (data) => {
-      // console.log(data)
+      console.log(data)
       const { driverId, lat, lng } = data;
       if (!driverId || !lat || !lng) {
         return socket.emit("error", {
@@ -56,8 +56,6 @@ export const setupSocketIO = (server) => {
           );
 
           // Emit driver's updated location to the rider (if a ride is ongoing)
-
-          
         } else {
           // console.log(`Driver ${driverId} is not active, location not updated`);
           return socket.emit("error", {
@@ -129,6 +127,8 @@ export const setupSocketIO = (server) => {
       // console.log(data);
       const { rideId, driverId } = data;
 
+      // console.log(data);
+
       if (!rideId || !driverId) {
         return socket.emit("error", {
           message: "Ride ID and Driver ID are required",
@@ -142,32 +142,47 @@ export const setupSocketIO = (server) => {
           { driverId, isRide_accept: true, isOn: true },
           { new: true }
         );
-
-        // if (ride && ride.riderId) {
-        //   // Fetch the rider's socketId
-        //   const rider = await Rider.findById(ride.riderId);
-        //   const riderSocketId = rider.socketId;
-
-        //   if (riderSocketId) {
-        //     // Notify the rider about the ride acceptance
-        //     io.to(riderSocketId).emit("rideAccepted", {
-        //       driverId,
-        //       rideId,
-        //       message: "Your ride has been accepted.",
-        //     });
-        //     console.log(
-        //       `Ride accepted by driver ${driverId}. Notified rider ${rider._id}`
-        //     );
-        //   } else {
-        //     console.error("Rider socketId not found");
-        //     socket.emit("error", { message: "Rider not connected" });
-        //   }
-        // } else {
-        //   socket.emit("error", { message: "Ride not found" });
-        // }
       } catch (error) {
         console.error("Error starting ride:", error.message);
         socket.emit("error", { message: "Failed to start ride" });
+      }
+    });
+
+    // Emit driver location to rider after ride acceptance
+    socket.on("driverLocationUpdateAfterAccept", async (data) => {
+      const {
+        driverLocation,
+        riderId,
+        riderLocation,
+        pickupLocation,
+        dropLocation,
+      } = data;
+      // console.log("hello location update data", data);
+
+      if (riderId) {
+        try {
+          const rider = await Rider.findById(riderId);
+          if (rider?.socketId) {
+            console.log(
+              `Emittinggggggggggggggggggggggggggggggggg location to rider socket: ${rider.socketId}`
+            );
+            io.to(rider.socketId).emit("driverLocationUpdate", {
+              driverLocation: driverLocation,
+              riderLocation: riderLocation,
+              pickupLocation: pickupLocation,
+              dropLocation: dropLocation,
+              message: "Driver's location after ride acceptance",
+            });
+          }
+        } catch (error) {
+          console.error(
+            "Error finding rider or emitting location:",
+            error.message
+          );
+          socket.emit("error", {
+            message: "Failed to emit driver location to rider",
+          });
+        }
       }
     });
 

@@ -21,8 +21,12 @@ const createRouterWithSocket = (io) => {
     .route("/findDrivers")
     .post((req, res, next) => findAvailableDrivers(io)(req, res, next));
 
-  router.route("/verify-pickup-otp").patch(verifyPickUpOtp);
-  router.route("/verify-drop-otp").patch(verifyDropOtp);
+  router
+    .route("/verify-pickup-otp")
+    .patch((req, res, next) => verifyPickUpOtp(io)(req, res, next));
+  router
+    .route("/verify-drop-otp")
+    .patch((req, res, next) => verifyDropOtp(io)(req, res, next));
   router
     .route("/cancel-ride")
     .delete((req, res, next) => cancelRide(io)(req, res, next));
