@@ -126,7 +126,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
           .json(new ApiResponse(500, null, "No response from OTP service"));
       }
     } catch (error) {
-      // console.error("Error sending OTP:", error.message);
+      console.error("Error sending OTP:", error.message);
       return res
         .status(500)
         .json(new ApiResponse(500, null, "Failed to send OTP"));
@@ -255,7 +255,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       try {
         validateData = JSON.parse(validationResponse);
       } catch (error) {
-        // console.error("Error parsing validation response:", error.message);
+        console.error("Error parsing validation response:", error.message);
         return res
           .status(500)
           .json(
@@ -272,7 +272,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       !validateData.data.responseCode ||
       !validateData.data.verificationStatus
     ) {
-      // console.error("Unexpected response structure:", validateData);
+      console.error("Unexpected response structure:", validateData);
       return res
         .status(500)
         .json(new ApiResponse(500, null, "Invalid response from OTP service"));
@@ -283,7 +283,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       validateData.data.responseCode !== "200" ||
       validateData.data.verificationStatus !== "VERIFICATION_COMPLETED"
     ) {
-      // console.error("OTP validation failed:", validateData.data);
+      console.error("OTP validation failed:", validateData.data);
       return res.status(400).json(new ApiResponse(400, null, "Invalid OTP"));
     }
 
@@ -299,7 +299,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     // If the user is a driver
     if (user.isDriver) {
       const driverDetails = await Driver.findOne({ phone });
-      // console.log(driverDetails);
+      console.log(driverDetails);
 
       const msg = {
         role: "driver",
