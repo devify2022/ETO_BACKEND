@@ -79,7 +79,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
     try {
       // Send OTP via Message Central
       otpResponse = await sendOtpViaMessageCentral(phone);
-
+      console.log(otpResponse)
       // Handle response for OTP service
       if (otpResponse) {
         // If response is a string, try to parse it
