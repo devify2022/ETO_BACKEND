@@ -44,7 +44,7 @@ app.use("/", paymentRouter);
 
 // Home route
 app.get("/", (req, res) => {
-  res.send("Welcome T0o EASY (TRIAL) API!");
+  res.send("Welcome To EASY (TRIAL) API!");
 });
 
 // Error handling middleware
