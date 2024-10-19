@@ -21,7 +21,7 @@ export const sendOtpViaMessageCentral = async (phone) => {
     request(options, function (error, response) {
       if (error) {
         console.error("Error sending OTP via Message Central:", error.message);
-        reject(new ApiError(500, "Failed to send OTP"));
+        reject(new ApiError(500, "Failed to send OTPs"));
       } else {
         try {
           const responseBody = JSON.parse(response.body);
