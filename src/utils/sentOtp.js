@@ -22,6 +22,7 @@ export const sendOtpViaMessageCentral = async (phone) => {
         reject(new Error(error));
       } else {
         let res = response.body;
+        console.log({url})
         console.log({ res });
         resolve(JSON.parse(res));
       }
