@@ -83,38 +83,38 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
       // Handle response for OTP service
       if (otpResponse) {
         // If response is a string, try to parse it
-        // if (typeof otpResponse === "string") {
-        //   try {
-        //     otpCredentials = JSON.parse(otpResponse);
-        //   } catch (error) {
-        //     console.error("Error parsing OTP response:", error.message);
-        //     return res
-        //       .status(500)
-        //       .json(new ApiResponse(500, null, "Error parsing OTP response"));
-        //   }
-        // } else {
-        //   otpCredentials = otpResponse; // Use directly if it's already an object
-        // }
+        if (typeof otpResponse === "string") {
+          try {
+            otpCredentials = JSON.parse(otpResponse);
+          } catch (error) {
+            console.error("Error parsing OTP response:", error.message);
+            return res
+              .status(500)
+              .json(new ApiResponse(500, null, "Error parsing OTP response"));
+          }
+        } else {
+          otpCredentials = otpResponse; // Use directly if it's already an object
+        }
 
-        // // Check if the OTP request was successful
-        // if (otpCredentials?.responseCode !== 200) {
-        //   return res
-        //     .status(400)
-        //     .json(
-        //       new ApiResponse(
-        //         400,
-        //         otpCredentials,
-        //         `OTP request failed: ${otpCredentials.message || "Unknown error"}`
-        //       )
-        //     );
-        // }
+        // Check if the OTP request was successful
+        if (otpCredentials?.responseCode !== 200) {
+          return res
+            .status(400)
+            .json(
+              new ApiResponse(
+                400,
+                otpCredentials,
+                `OTP request failed: ${otpCredentials.message || "Unknown error"}`
+              )
+            );
+        }
 
         const data = {
           role,
           accessToken,
           refreshToken,
           userDetails: userDetails || {}, // Send user details if available
-          otpdata: otpResponse,
+          otpdata: otpCredentials.data,
         };
 
         return res
@@ -129,7 +129,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
       console.error("Error sending OTP:", error.message);
       return res
         .status(500)
-        .json(new ApiResponse(500, null, "Failed to send OTP4"));
+        .json(new ApiResponse(500, null, "Failed to send OTP"));
     }
   } else {
     // Handle new user registration
@@ -163,22 +163,11 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
     try {
       // Send OTP via Message Central
       otpResponse = await sendOtpViaMessageCentral(phone);
-  otpCredentials = otpResponse; // Use directly if it's already an object
+
       // Handle response for OTP service
       if (otpResponse) {
         // If response is a string, try to parse it
-        // if (typeof otpResponse === "string") {
-        //   try {
-        //     otpCredentials = JSON.parse(otpResponse);
-        //   } catch (error) {
-        //     console.error("Error parsing OTP response:", error.message);
-        //     return res
-        //       .status(500)
-        //       .json(new ApiResponse(500, null, "Error parsing OTP response"));
-        //   }
-        // } else {
-        //   otpCredentials = otpResponse; // Use directly if it's already an object
-        // }
+          otpCredentials = otpResponse; // Use directly if it's already an object
 
         // Check if the OTP request was successful
         if (otpCredentials?.responseCode !== 200) {
@@ -188,7 +177,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
               new ApiResponse(
                 400,
                 otpCredentials,
-                `OTP request failed1: ${otpCredentials.message || "Unknown error"}`
+                `OTP request failed: ${otpCredentials.message || "Unknown error"}`
               )
             );
         }
@@ -204,13 +193,13 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
       } else {
         return res
           .status(500)
-          .json(new ApiResponse(500, {otpCredentials}, "No response from OTP service2"));
+          .json(new ApiResponse(500, null, "No response from OTP service"));
       }
     } catch (error) {
       console.error("Error sending OTP:", error.message);
       return res
         .status(500)
-        .json(new ApiResponse(500, null, "Failed to send OTP3"));
+        .json(new ApiResponse(500, null, "Failed to send OTP"));
     }
   }
 });

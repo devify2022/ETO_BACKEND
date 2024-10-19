@@ -16,31 +16,17 @@ export const sendOtpViaMessageCentral = async (phone) => {
       authToken: authToken,
     },
   };
-
   return new Promise((resolve, reject) => {
     request(options, function (error, response) {
       if (error) {
-        console.error("Error sending OTP via Message Central:", error.message);
-        reject(new ApiError(500, "Failed to send OTP5"));
+        reject(new Error(error));
       } else {
-        try {
-          const responseBody = response.body;
-          // Check for specific errors from Message Central API
-          if (responseBody.error) {
-            console.error("Message Central Error:", responseBody.error);
-            reject(
-              new ApiError(500, `OTP service error2: ${responseBody}`)
-            );
-          } else {
-            resolve(responseBody); // Return the parsed response
-          }
-        } catch (parseError) {
-          console.error("Error parsing OTP response:", response.body);
-          reject(new ApiError(500, "Failed to parse OTP response"));
-        }
+        let res = response.body;
+        console.log({ res });
+        resolve(JSON.parse(res));
       }
     });
-  });
+  })
 };
 
 // Function to Validate OTP via Message Central
@@ -95,4 +81,3 @@ export const validateOtpViaMessageCentral = async (
     });
   });
 };
-
