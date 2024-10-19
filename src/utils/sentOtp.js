@@ -35,7 +35,7 @@ export const sendOtpViaMessageCentral = async (phone) => {
             resolve(responseBody); // Return the parsed response
           }
         } catch (parseError) {
-          console.error("Error parsing OTP response:", parseError.message);
+          console.error("Error parsing OTP response:", response.body);
           reject(new ApiError(500, "Failed to parse OTP response"));
         }
       }
