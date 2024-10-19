@@ -13,7 +13,7 @@ app.post("/webhook", (req, res) => {
     console.log("New code pushed to GitHub. Pulling and redeploying...");
 
     // Pull the latest code and restart app
-    exec("cd ~/ETO_BACKEND && git pull origin main && npm install && pm2 restart all", (err, stdout, stderr) => {
+    exec("git pull origin main && npm install && pm2 restart all", (err, stdout, stderr) => {
       if (err) {
         console.error("Error pulling code or restarting app:", err);
         return res.status(500).send("Deployment failed");
