@@ -129,7 +129,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
       // console.error("Error sending OTP:", error.message);
       return res
         .status(500)
-        .json(new ApiResponse(500, null, error)
+        .json(new ApiResponse(500, null, error))
     }
   } else {
     // Handle new user registration
