@@ -76,7 +76,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
     user.isVerified = false;
     await user.save();
 
-   try {
+    try {
       // Send OTP via Message Central
       otpResponse = await sendOtpViaMessageCentral(phone);
 
@@ -85,7 +85,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
         // If response is a string, try to parse it
         if (typeof otpResponse === "string") {
           try {
-            otpCredentials = otpResponse
+            otpCredentials = JSON.parse(otpResponse);
           } catch (error) {
             console.error("Error parsing OTP response:", error.message);
             return res
@@ -129,7 +129,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
       // console.error("Error sending OTP:", error.message);
       return res
         .status(500)
-        .json(new ApiResponse(500, null, error))
+        .json(new ApiResponse(500, null, "Failed to send OTP"));
     }
   } else {
     // Handle new user registration
