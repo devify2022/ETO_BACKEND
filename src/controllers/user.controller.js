@@ -83,38 +83,38 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
       // Handle response for OTP service
       if (otpResponse) {
         // If response is a string, try to parse it
-        if (typeof otpResponse === "string") {
-          try {
-            otpCredentials = otpResponse
-          } catch (error) {
-            console.error("Error parsing OTP response:", error.message);
-            return res
-              .status(500)
-              .json(new ApiResponse(500, null, "Error parsing OTP response"));
-          }
-        } else {
-          otpCredentials = otpResponse; // Use directly if it's already an object
-        }
+        // if (typeof otpResponse === "string") {
+        //   try {
+        //     otpCredentials = JSON.parse(otpResponse);
+        //   } catch (error) {
+        //     console.error("Error parsing OTP response:", error.message);
+        //     return res
+        //       .status(500)
+        //       .json(new ApiResponse(500, null, "Error parsing OTP response"));
+        //   }
+        // } else {
+        //   otpCredentials = otpResponse; // Use directly if it's already an object
+        // }
 
-        // Check if the OTP request was successful
-        if (otpCredentials?.responseCode !== 200) {
-          return res
-            .status(400)
-            .json(
-              new ApiResponse(
-                400,
-                otpCredentials,
-                `OTP request failed: ${otpCredentials.message || "Unknown error"}`
-              )
-            );
-        }
+        // // Check if the OTP request was successful
+        // if (otpCredentials?.responseCode !== 200) {
+        //   return res
+        //     .status(400)
+        //     .json(
+        //       new ApiResponse(
+        //         400,
+        //         otpCredentials,
+        //         `OTP request failed: ${otpCredentials.message || "Unknown error"}`
+        //       )
+        //     );
+        // }
 
         const data = {
           role,
           accessToken,
           refreshToken,
           userDetails: userDetails || {}, // Send user details if available
-          otpdata: otpCredentials.data,
+          otpdata: otpResponse,
         };
 
         return res
@@ -126,10 +126,10 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
           .json(new ApiResponse(500, null, "No response from OTP service"));
       }
     } catch (error) {
-      // console.error("Error sending OTP:", error.message);
+      console.error("Error sending OTP:", error.message);
       return res
         .status(500)
-        .json(new ApiResponse(500, error, "Failed to send OTPs"));
+        .json(new ApiResponse(500, null, "Failed to send OTP"));
     }
   } else {
     // Handle new user registration
@@ -166,20 +166,19 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
 
       // Handle response for OTP service
       if (otpResponse) {
-           otpCredentials = otpResponse; // Use directly if it's already an object
         // If response is a string, try to parse it
-        // if (typeof otpResponse === "string") {
-        //   try {
-        //     otpCredentials = JSON.parse(otpResponse);
-        //   } catch (error) {
-        //     console.error("Error parsing OTP response:", error.message);
-        //     return res
-        //       .status(500)
-        //       .json(new ApiResponse(500, null, "Error parsing OTP response"));
-        //   }
-        // } else {
-        //   otpCredentials = otpResponse; // Use directly if it's already an object
-        // }
+        if (typeof otpResponse === "string") {
+          try {
+            otpCredentials = JSON.parse(otpResponse);
+          } catch (error) {
+            console.error("Error parsing OTP response:", error.message);
+            return res
+              .status(500)
+              .json(new ApiResponse(500, null, "Error parsing OTP response"));
+          }
+        } else {
+          otpCredentials = otpResponse; // Use directly if it's already an object
+        }
 
         // Check if the OTP request was successful
         if (otpCredentials?.responseCode !== 200) {
@@ -205,13 +204,13 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
       } else {
         return res
           .status(500)
-          .json(new ApiResponse(500, otpResponse, "No response from OTP service"));
+          .json(new ApiResponse(500, null, "No response from OTP service"));
       }
     } catch (error) {
       console.error("Error sending OTP:", error.message);
       return res
         .status(500)
-        .json(new ApiResponse(500, otpResponse, "Failed to send OTPd"));
+        .json(new ApiResponse(500, null, "Failed to send OTP"));
     }
   }
 });
@@ -256,7 +255,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       try {
         validateData = JSON.parse(validationResponse);
       } catch (error) {
-        // console.error("Error parsing validation response:", error.message);
+        console.error("Error parsing validation response:", error.message);
         return res
           .status(500)
           .json(
@@ -273,7 +272,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       !validateData.data.responseCode ||
       !validateData.data.verificationStatus
     ) {
-      // console.error("Unexpected response structure:", validateData);
+      console.error("Unexpected response structure:", validateData);
       return res
         .status(500)
         .json(new ApiResponse(500, null, "Invalid response from OTP service"));
@@ -284,7 +283,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       validateData.data.responseCode !== "200" ||
       validateData.data.verificationStatus !== "VERIFICATION_COMPLETED"
     ) {
-      // console.error("OTP validation failed:", validateData.data);
+      console.error("OTP validation failed:", validateData.data);
       return res.status(400).json(new ApiResponse(400, null, "Invalid OTP"));
     }
 
@@ -300,7 +299,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     // If the user is a driver
     if (user.isDriver) {
       const driverDetails = await Driver.findOne({ phone });
-      // console.log(driverDetails);
+      console.log(driverDetails);
 
       const msg = {
         role: "driver",
