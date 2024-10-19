@@ -377,10 +377,15 @@ export const verifyPickUpOtp = (io) =>
       ride.started_time = Date.now();
       await ride.save();
 
+      console.log("Rider socket ID:", rider.socketId);
+      console.log("Driver socket ID:", driver.socketId);
+
       // Emit updates to both the rider and driver
       if (rider.socketId) {
-        console.log(`sendinggggg data after pickup otp verify ${rider.socketId}`)
-        io.to(rider.socketId).emit("pickupOtpVerifiedToRider", {
+        console.log(
+          `sendinggggg data after pickup otp verify to rider ${rider.socketId}`
+        );
+        io.to(rider.socketId).emit("pickupRider", {
           message: "Pickup OTP verified. Ride is now active.",
           isRide_started: true,
           rideId: ride._id,
@@ -388,6 +393,9 @@ export const verifyPickUpOtp = (io) =>
       }
 
       if (driver.socketId) {
+        console.log(
+          `sendinggggg data after pickup otp verify to driver ${driver.socketId}`
+        );
         io.to(driver.socketId).emit("pickupOtpVerifiedToDriver", {
           message: "Pickup OTP verified. Ride is now active.",
           isRide_started: true,
@@ -462,10 +470,13 @@ export const verifyDropOtp = (io) =>
       ride.ride_end_time = Date.now();
       await ride.save();
 
+      console.log("Rider socket ID:", rider.socketId);
+      console.log("Driver socket ID:", driver.socketId);
+
       // Emit ride completion updates to both the rider and driver
       if (rider.socketId) {
-        console.log(`emiting ride completed data, ${rider.socketId}`)
-        io.to(rider.socketId).emit("rideCompletedToRider", {
+        console.log(`emiting ride completed data to rider, ${rider.socketId}`);
+        io.to(rider.socketId).emit("rideVerifyRider", {
           message: "Ride completed and OTP verified",
           isAccept: false,
           isRide_started: false,
@@ -474,7 +485,7 @@ export const verifyDropOtp = (io) =>
       }
 
       if (driver.socketId) {
-        console.log(`emiting ride completed data, ${driver.socketId}`);
+        console.log(`emiting ride completed data to driver, ${driver.socketId}`);
         io.to(driver.socketId).emit("rideCompletedToDriver", {
           message: "Ride completed and OTP verified",
           isAccept: false,
