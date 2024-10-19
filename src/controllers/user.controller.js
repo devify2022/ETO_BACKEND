@@ -205,7 +205,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
       } else {
         return res
           .status(500)
-          .json(new ApiResponse(500, null, "No response from OTP service"));
+          .json(new ApiResponse(500, otpResponse, "No response from OTP service"));
       }
     } catch (error) {
       console.error("Error sending OTP:", error.message);
