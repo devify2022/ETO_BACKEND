@@ -166,19 +166,20 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
 
       // Handle response for OTP service
       if (otpResponse) {
+           otpCredentials = otpResponse; // Use directly if it's already an object
         // If response is a string, try to parse it
-        if (typeof otpResponse === "string") {
-          try {
-            otpCredentials = JSON.parse(otpResponse);
-          } catch (error) {
-            console.error("Error parsing OTP response:", error.message);
-            return res
-              .status(500)
-              .json(new ApiResponse(500, null, "Error parsing OTP response"));
-          }
-        } else {
-          otpCredentials = otpResponse; // Use directly if it's already an object
-        }
+        // if (typeof otpResponse === "string") {
+        //   try {
+        //     otpCredentials = JSON.parse(otpResponse);
+        //   } catch (error) {
+        //     console.error("Error parsing OTP response:", error.message);
+        //     return res
+        //       .status(500)
+        //       .json(new ApiResponse(500, null, "Error parsing OTP response"));
+        //   }
+        // } else {
+        //   otpCredentials = otpResponse; // Use directly if it's already an object
+        // }
 
         // Check if the OTP request was successful
         if (otpCredentials?.responseCode !== 200) {
