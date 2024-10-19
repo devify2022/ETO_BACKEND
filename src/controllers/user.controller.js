@@ -85,7 +85,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
         // If response is a string, try to parse it
         if (typeof otpResponse === "string") {
           try {
-            otpCredentials = JSON.parse(otpResponse);
+            otpCredentials = otpResponse
           } catch (error) {
             console.error("Error parsing OTP response:", error.message);
             return res
