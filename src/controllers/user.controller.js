@@ -210,7 +210,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
       console.error("Error sending OTP:", error.message);
       return res
         .status(500)
-        .json(new ApiResponse(500, null, "Failed to send OTP"));
+        .json(new ApiResponse(500, null, "Failed to send OTPd"));
     }
   }
 });
