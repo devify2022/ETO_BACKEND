@@ -7,6 +7,9 @@ app.use(bodyParser.json());
 
 app.post("/webhook", (req, res) => {
   const payload = req.body;
+  
+  // Log the incoming payload for debugging
+  console.log("Received webhook payload:", JSON.stringify(payload, null, 2));
 
   // Ensure it's a push event
   if (payload.ref === "refs/heads/main") {
