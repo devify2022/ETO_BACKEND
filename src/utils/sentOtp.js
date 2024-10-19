@@ -8,10 +8,12 @@ const authToken = process.env.MESSAGE_CENTRAL_AUTH_TOKEN; // Ensure this is stor
 const customerId = process.env.MESSAGE_CENTRAL_CUSTOMER_ID; // Store this in .env as well
 
 // Function to Send OTP via Message Central
+
 export const sendOtpViaMessageCentral = async (phone) => {
+  let url = `https://cpaas.messagecentral.com/verification/v3/send?countryCode=91&customerId=${customerId}&flowType=SMS&mobileNumber=${phone}`;
   const options = {
     method: "POST",
-    url: `https://cpaas.messagecentral.com/verification/v3/send?countryCode=91&customerId=${customerId}&flowType=SMS&mobileNumber=${phone}`,
+    url: url,
     headers: {
       authToken: authToken,
     },
@@ -22,12 +24,13 @@ export const sendOtpViaMessageCentral = async (phone) => {
         reject(new Error(error));
       } else {
         let res = response.body;
-        console.log({url})
+        console.log({ url });
+        console.log({ authToken });
         console.log({ res });
         resolve(JSON.parse(res));
       }
     });
-  })
+  });
 };
 
 // Function to Validate OTP via Message Central
