@@ -12,11 +12,11 @@ export const setupSocketIO = (server) => {
   });
 
   io.on("connection", (socket) => {
-    console.log("A user connected:", socket.id);
+    // console.log("A user connected:", socket.id);
 
     // Register Driver Socket ID with location update and isActive check
     socket.on("registerDriver", async (data) => {
-      console.log(data)
+      // console.log(data)
       const { driverId, lat, lng } = data;
       if (!driverId || !lat || !lng) {
         return socket.emit("error", {

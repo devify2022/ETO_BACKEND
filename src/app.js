@@ -47,6 +47,11 @@ app.get("/", (req, res) => {
   res.send("Welcome To1 EASY Toto Oerator (TRIAL) API!");
 });
 
+app.get("/test", (req, res) => {
+  res.send("Welcome to00 EASY (TRIAL) API!");
+});
+
+
 // Error handling middleware
 app.use(errorHandler);
 
