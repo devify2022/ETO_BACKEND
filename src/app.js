@@ -44,7 +44,7 @@ app.use("/", paymentRouter);
 
 // Home route
 app.get("/", (req, res) => {
-  res.send("Welcome To EASY Toto Oerator (TRIAL) API!");
+  res.send("Welcome To1 EASY Toto Oerator (TRIAL) API!");
 });
 
 app.get("/test", (req, res) => {
