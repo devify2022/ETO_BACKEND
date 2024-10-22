@@ -1,49 +1,10 @@
-1. Send Pickup OTP and Drop OTP to Rider When Driver Accepts the Request (DONE)
-After the driver accepts the ride request, send a pickup OTP and a drop OTP to the rider.
-
-2. Set is_on_ride to True After Verifying Pickup and Drop OTPs (DONE)
-Create an OTP verification API. Once both OTPs (pickup and drop) are verified, set is_on_ride to true.
-
-3. Create a Ride Cancel API (DONE)
-Create an API to allow the rider to cancel the ride. When the ride is canceled, delete the ride entry from the rideDetails collection.
-
-4. Create a Recent Rides API
+1. Create a Recent Rides API
 Create an API that, given a driver's ID and a timestamp, returns a maximum of 5 recent rides.
 
-5. Create a Current Ride API for Driver (DONE)
-Create an API that retrieves the driver's current ongoing ride details.
-
-6. Create a Ride History API for Driver (DONE)
-Create an API that retrieves the ride history for a specific driver.
-
-7. Create a Next Ride API for Driver (Have Doubt)
-Create an API that retrieves the next upcoming ride for the driver. (Have Doubt)
-
-8. Create a Ride History API for Rider (Done)
-Create an API that retrieves the ride history for a specific rider.
-
-9. Create an API for Driver's Total Earnings Date-wise (Have Doubt)
+2. Create an API for Driver's Total Earnings Date-wise
 Create an API that returns the total earnings of the driver, filtered by date.
 
-10. Create an API for Driver's Total Withdrawals (Date-wise)
+3. Create an API for Driver's Total Withdrawals (Date-wise)
 Create an API that returns the total withdrawals made by the driver, filtered by date.
 
-11. Create a Active And Deactive API for Driver (Done)
-
-12. Track Driver location after login (Done)
-
-13- Track Rider Location (Done)
-
-For Admin:
-1. Create a Ride History API for Admin (Done)
-Create an API that retrieves the entire ride history for the admin.
-
-2. Create a Ride History API for Admin to Get Ride History of All Drivers (Done)
-Create an API that allows the admin to retrieve the ride history for all drivers.
-
-3. Create a Ride History API for Admin to Get Ride History of All Riders (Done)
-Create an API that allows the admin to retrieve the ride history for all riders.
-
-4. Get all active driver (Done)
-
-5. 
+4- Create Get Current Ride for Rider.
