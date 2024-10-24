@@ -1,11 +1,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Rider } from "../models/rider.model.js";
 import { Driver } from "../models/driver.model.js";
-import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import generateOtp from "../utils/otpGenerate.js";
 import { RideDetails } from "../models/rideDetails.model.js";
 import mongoose from "mongoose";
+import geolib from "geolib";
 
 // Looking Drivers for Ride
 export const findAvailableDrivers = (io) =>
@@ -103,26 +103,285 @@ export const findAvailableDrivers = (io) =>
     }
   });
 
-// Accept Ride request
-export const acceptRide = (io) =>
+// Looking Drivers for Ride new functionality
+export const findAvailableDrivers2 = asyncHandler(async (req, res) => {
+  const { riderId, dropLocation, pickLocation } = req.body;
+  const proximityRadius = 5; // Search radius in kilometers
+  const baseFare = 20;
+  const perKmCharge = 15;
+  const adminProfitPercentage = 40;
+  const averageSpeed = 40; // Average speed in km/h
+
+  if (!riderId || !pickLocation || !dropLocation) {
+    return res
+      .status(400)
+      .json(
+        new ApiResponse(
+          400,
+          null,
+          "Rider ID, pickup, and drop locations are required"
+        )
+      );
+  }
+
+  try {
+    const rider = await Rider.findById(riderId);
+    if (!rider) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Rider not found"));
+    }
+
+    const pickupCoordinates = [pickLocation.longitude, pickLocation.latitude];
+
+    const availableDrivers = await Driver.find({
+      current_location: {
+        $near: {
+          $geometry: { type: "Point", coordinates: pickupCoordinates },
+          $maxDistance: proximityRadius * 1000, // Convert km to meters
+        },
+      },
+      isActive: true,
+      is_on_ride: false,
+    });
+
+    if (availableDrivers.length === 0) {
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            { isAvailable: false },
+            "No available drivers found"
+          )
+        );
+    }
+
+    const totalKm =
+      geolib.getDistance(
+        { latitude: pickLocation.latitude, longitude: pickLocation.longitude },
+        { latitude: dropLocation.latitude, longitude: dropLocation.longitude }
+      ) / 1000; // Convert meters to kilometers
+
+    const totalPrice = baseFare + totalKm * perKmCharge;
+    const adminProfit = (adminProfitPercentage / 100) * totalPrice;
+    const driverProfit = totalPrice - adminProfit;
+
+    // Add the distance and time from each available driver's location to the pickup point
+    const driversWithTime = availableDrivers.map((driver) => {
+      const driverDistanceToPickup =
+        geolib.getDistance(
+          {
+            latitude: driver.current_location.coordinates[1],
+            longitude: driver.current_location.coordinates[0],
+          },
+          { latitude: pickLocation.latitude, longitude: pickLocation.longitude }
+        ) / 1000; // Convert meters to kilometers
+
+      const estimatedTimeToPickup = driverDistanceToPickup / averageSpeed; // Time in hours
+
+      return {
+        driverId: driver._id,
+        location: driver.current_location.coordinates,
+        name: driver.name,
+        distanceToPickup: driverDistanceToPickup.toFixed(2) + " km",
+        estimatedTimeToPickup:
+          (estimatedTimeToPickup * 60).toFixed(2) + " mins", // Convert hours to minutes
+      };
+    });
+
+    const resData = {
+      availableDrivers: driversWithTime,
+      totalKm,
+      totalPrice,
+      adminProfit,
+      driverProfit,
+      isAvailable: true,
+    };
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, resData, "Drivers found successfully"));
+  } catch (error) {
+    console.error("Error finding available drivers:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to find available drivers"));
+  }
+});
+
+// // Accept Ride request
+// export const acceptRide = (io) =>
+//   asyncHandler(async (req, res) => {
+//     const {
+//       driverId,
+//       riderId,
+//       dropLocation,
+//       pickup_location,
+//       total_amount,
+//       totalKm,
+//     } = req.body;
+
+//     // console.log(req.body);
+
+//     if (
+//       !driverId ||
+//       !riderId ||
+//       !dropLocation ||
+//       !pickup_location ||
+//       !totalKm
+//     ) {
+//       return res
+//         .status(400)
+//         .json(
+//           new ApiResponse(
+//             400,
+//             null,
+//             "Driver ID, Rider ID, Drop Location, Pickup Location, and Total Kilometers are required"
+//           )
+//         );
+//     }
+
+//     if (
+//       !Array.isArray(pickup_location) ||
+//       pickup_location.length !== 2 ||
+//       !Array.isArray(dropLocation) ||
+//       dropLocation.length !== 2
+//     ) {
+//       return res
+//         .status(400)
+//         .json(
+//           new ApiResponse(
+//             400,
+//             null,
+//             "Pickup and Drop Locations must be arrays with [longitude, latitude]"
+//           )
+//         );
+//     }
+
+//     try {
+//       const rider = await Rider.findById(riderId);
+//       const driver = await Driver.findById(driverId);
+
+//       if (!rider) {
+//         return res
+//           .status(404)
+//           .json(new ApiResponse(404, null, "Rider not found"));
+//       }
+//       if (!driver) {
+//         return res
+//           .status(404)
+//           .json(new ApiResponse(404, null, "Driver not found"));
+//       }
+
+//       if (rider.is_on_ride) {
+//         return res
+//           .status(400)
+//           .json(new ApiResponse(400, null, "Rider is already on a ride"));
+//       }
+
+//       if (driver.is_on_ride) {
+//         return res
+//           .status(400)
+//           .json(new ApiResponse(400, null, "Driver is already on a ride"));
+//       }
+
+//       const perKmCharge = 10; // Per kilometer charge
+//       const adminPercentage = 40; // Admin percentage
+
+//       const totalAmount = totalKm * perKmCharge;
+//       const adminAmount = (adminPercentage / 100) * totalAmount;
+//       const driverProfit = totalAmount - adminAmount;
+
+//       const pickupOtp = generateOtp();
+//       const dropOtp = generateOtp();
+
+//       const newRide = new RideDetails({
+//         driverId: driver._id,
+//         riderId: rider._id,
+//         pickup_location: {
+//           type: "Point",
+//           coordinates: pickup_location, // [longitude, latitude]
+//         },
+//         drop_location: {
+//           type: "Point",
+//           coordinates: dropLocation, // [longitude, latitude]
+//         },
+//         total_km: totalKm,
+//         pickup_otp: pickupOtp,
+//         drop_otp: dropOtp,
+//         total_amount: totalAmount,
+//         admin_percentage: adminPercentage,
+//         admin_profit: adminAmount,
+//         driver_profit: driverProfit,
+//       });
+
+//       await newRide.save();
+//       // console.log("rider", rider.socketId);
+//       // console.log("driver", driver.socketId);
+
+//       if (rider.socketId) {
+//         // console.log("hello")
+//         console.log("Emitting rideAccepted to rider:", rider.socketId);
+//         io.to(rider.socketId).emit("rideAccepted", {
+//           driverId: driver._id,
+//           riderId: riderId,
+//           rideId: newRide._id,
+//           riderId: newRide.riderId,
+//           riderLocation: rider.current_location,
+//           driverLocation: driver.current_location,
+//           totalPrice: newRide.total_amount,
+//           pickupOtp,
+//           dropOtp,
+//         });
+//       }
+
+//       if (driver.socketId) {
+//         io.to(driver.socketId).emit("rideDetails", {
+//           rideId: newRide._id,
+//           riderId: riderId,
+//           riderLocation: rider.current_location,
+//           pickupLocation: newRide.pickup_location,
+//           dropLocation: newRide.drop_location,
+//           pickupOtp,
+//           dropOtp,
+//           totalAmount,
+//           adminProfit: adminAmount,
+//           driverProfit,
+//         });
+//       }
+
+//       return res
+//         .status(200)
+//         .json(new ApiResponse(200, newRide, "Ride accepted successfully"));
+//     } catch (error) {
+//       console.error("Error accepting the ride:", error.message);
+//       return res
+//         .status(500)
+//         .json(new ApiResponse(500, null, "Failed to accept the ride"));
+//     }
+//   });
+
+// Accept Ride request new api
+export const acceptRide2 = (io) =>
   asyncHandler(async (req, res) => {
     const {
       driverId,
       riderId,
       dropLocation,
       pickup_location,
-      total_amount,
       totalKm,
+      totalPrice, // Pass totalPrice calculated from findAvailableDrivers2
     } = req.body;
 
-    // console.log(req.body);
-
+    // Input validation
     if (
       !driverId ||
       !riderId ||
       !dropLocation ||
       !pickup_location ||
-      !totalKm
+      totalKm === undefined ||
+      totalPrice === undefined
     ) {
       return res
         .status(400)
@@ -130,11 +389,12 @@ export const acceptRide = (io) =>
           new ApiResponse(
             400,
             null,
-            "Driver ID, Rider ID, Drop Location, Pickup Location, and Total Kilometers are required"
+            "Driver ID, Rider ID, Drop Location, Pickup Location, Total Kilometers, and Total Price are required"
           )
         );
     }
 
+    // Validate location formats
     if (
       !Array.isArray(pickup_location) ||
       pickup_location.length !== 2 ||
@@ -156,6 +416,7 @@ export const acceptRide = (io) =>
       const rider = await Rider.findById(riderId);
       const driver = await Driver.findById(driverId);
 
+      // Check existence of rider and driver
       if (!rider) {
         return res
           .status(404)
@@ -167,28 +428,28 @@ export const acceptRide = (io) =>
           .json(new ApiResponse(404, null, "Driver not found"));
       }
 
+      // Check if rider or driver is already on a ride
       if (rider.is_on_ride) {
         return res
           .status(400)
           .json(new ApiResponse(400, null, "Rider is already on a ride"));
       }
-
       if (driver.is_on_ride) {
         return res
           .status(400)
           .json(new ApiResponse(400, null, "Driver is already on a ride"));
       }
 
-      const perKmCharge = 10; // Per kilometer charge
+      // Calculate admin and driver profits based on the total price
       const adminPercentage = 40; // Admin percentage
+      const adminAmount = (adminPercentage / 100) * totalPrice;
+      const driverProfit = totalPrice - adminAmount;
 
-      const totalAmount = totalKm * perKmCharge;
-      const adminAmount = (adminPercentage / 100) * totalAmount;
-      const driverProfit = totalAmount - adminAmount;
-
+      // Generate OTPs
       const pickupOtp = generateOtp();
       const dropOtp = generateOtp();
 
+      // Create new ride details
       const newRide = new RideDetails({
         driverId: driver._id,
         riderId: rider._id,
@@ -203,24 +464,20 @@ export const acceptRide = (io) =>
         total_km: totalKm,
         pickup_otp: pickupOtp,
         drop_otp: dropOtp,
-        total_amount: totalAmount,
+        total_amount: totalPrice, // Use totalPrice from findAvailableDrivers2
         admin_percentage: adminPercentage,
         admin_profit: adminAmount,
         driver_profit: driverProfit,
       });
 
       await newRide.save();
-      // console.log("rider", rider.socketId);
-      // console.log("driver", driver.socketId);
 
+      // Emit ride details to the rider and driver via Socket.IO
       if (rider.socketId) {
-        // console.log("hello")
-        console.log("Emitting rideAccepted to rider:", rider.socketId);
         io.to(rider.socketId).emit("rideAccepted", {
           driverId: driver._id,
           riderId: riderId,
           rideId: newRide._id,
-          riderId: newRide.riderId,
           riderLocation: rider.current_location,
           driverLocation: driver.current_location,
           totalPrice: newRide.total_amount,
@@ -238,7 +495,7 @@ export const acceptRide = (io) =>
           dropLocation: newRide.drop_location,
           pickupOtp,
           dropOtp,
-          totalAmount,
+          totalAmount: newRide.total_amount,
           adminProfit: adminAmount,
           driverProfit,
         });
@@ -485,7 +742,9 @@ export const verifyDropOtp = (io) =>
       }
 
       if (driver.socketId) {
-        console.log(`emiting ride completed data to driver, ${driver.socketId}`);
+        console.log(
+          `emiting ride completed data to driver, ${driver.socketId}`
+        );
         io.to(driver.socketId).emit("rideCompletedToDriver", {
           message: "Ride completed and OTP verified",
           isAccept: false,

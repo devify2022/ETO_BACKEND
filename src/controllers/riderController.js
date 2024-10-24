@@ -2,7 +2,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { Rider } from "../models/rider.model.js";
 import { RideDetails } from "../models/rideDetails.model.js";
 import { ApiResponse } from "../utils/apiResponse.js";
-import { ApiError } from "../utils/apiError.js";
 
 // Get All Riders Function
 export const getAllRiders = asyncHandler(async (req, res) => {
@@ -46,6 +45,54 @@ export const getRiderById = asyncHandler(async (req, res) => {
     return res
       .status(500)
       .json(new ApiResponse(500, null, "Failed to retrieve rider"));
+  }
+});
+
+// Get Current Ride Function
+export const getCurrentRide = asyncHandler(async (req, res) => {
+  const { id } = req.params; // Rider ID passed as a parameter
+
+  if (!id) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Rider ID is required"));
+  }
+
+  try {
+    // Find the rider by ID and ensure they're on a ride
+    const rider = await Rider.findOne({
+      _id: id,
+      is_on_ride: true, // Ensure the rider is currently on a ride
+      current_ride_id: { $exists: true, $ne: null }, // Ensure current_ride_id exists
+    });
+
+    if (!rider) {
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(404, null, "No active ride found for the given rider")
+        );
+    }
+
+    // Retrieve the ride details using the current_ride_id
+    const rideDetails = await RideDetails.findById(rider.current_ride_id);
+
+    if (!rideDetails) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Ride details not found"));
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, rideDetails, "Current ride retrieved successfully")
+      );
+  } catch (error) {
+    console.error("Error retrieving current ride:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to retrieve current ride"));
   }
 });
 

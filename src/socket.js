@@ -122,29 +122,60 @@ export const setupSocketIO = (server) => {
       }
     });
 
+    // Emit available drivers' location when requested
+    socket.on("sendAvailableDriversLocation", async (data) => {
+      const { riderId } = data;
+
+      try {
+        const rider = await Rider.findById(riderId);
+        if (rider?.socketId) {
+          const drivers = await Driver.find({
+            isActive: true,
+            is_on_ride: false,
+          });
+          io.to(rider.socketId).emit("availableDriversLocation", {
+            drivers: drivers.map((driver) => ({
+              driverId: driver._id,
+              location: driver.current_location.coordinates,
+              name: driver.name,
+            })),
+            message: "Updated available drivers sent to rider",
+          });
+        }
+      } catch (error) {
+        console.error("Error sending drivers' location:", error.message);
+        socket.emit("error", {
+          message: "Failed to send available drivers' location",
+        });
+      }
+    });
+
     // Accept Ride Event
     socket.on("acceptRide", async (data) => {
-      // console.log(data);
-      const { rideId, driverId } = data;
-
-      // console.log(data);
-
-      if (!rideId || !driverId) {
+      const { rideId, riderId, driverId } = data;
+      if (!rideId || !riderId || !driverId) {
         return socket.emit("error", {
           message: "Ride ID and Driver ID are required",
         });
       }
 
       try {
-        // Update ride status in the database
-        await RideDetails.findByIdAndUpdate(
+        const ride = await RideDetails.findByIdAndUpdate(
           rideId,
           { driverId, isRide_accept: true, isOn: true },
           { new: true }
         );
+
+        const rider = await Rider.findById(riderId);
+        if (rider?.socketId) {
+          io.to(rider.socketId).emit("rideStatus", {
+            isBooked: true,
+            message: "Booking request accepted. Ride successfully booked.",
+          });
+        }
       } catch (error) {
-        console.error("Error starting ride:", error.message);
-        socket.emit("error", { message: "Failed to start ride" });
+        console.error("Error accepting ride:", error.message);
+        socket.emit("error", { message: "Failed to accept ride" });
       }
     });
 
