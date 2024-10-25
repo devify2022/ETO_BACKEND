@@ -8,108 +8,109 @@ import mongoose from "mongoose";
 import geolib from "geolib";
 
 // Looking Drivers for Ride
-export const findAvailableDrivers = (io) =>
-  asyncHandler(async (req, res, next) => {
-    const { riderId, dropLocation, pickLocation, totalKm } = req.body;
-    const proximityRadius = 5; // Define radius to search for nearby drivers (in kilometers)
-    const perKmCharge = 10; // Charge per kilometer
-    const adminProfitPercentage = 40; // Admin profit percentage (40%)
+// export const findAvailableDrivers = (io) =>
+//   asyncHandler(async (req, res, next) => {
+//     const { riderId, dropLocation, pickLocation, totalKm } = req.body;
+//     const proximityRadius = 5; // Define radius to search for nearby drivers (in kilometers)
+//     const perKmCharge = 10; // Charge per kilometer
+//     const adminProfitPercentage = 40; // Admin profit percentage (40%)
 
-    if (!riderId) {
-      return res
-        .status(400)
-        .json(new ApiResponse(400, null, "Rider ID is required"));
-    }
+//     if (!riderId) {
+//       return res
+//         .status(400)
+//         .json(new ApiResponse(400, null, "Rider ID is required"));
+//     }
 
-    if (!pickLocation || !dropLocation || !totalKm) {
-      return res
-        .status(400)
-        .json(
-          new ApiResponse(
-            400,
-            null,
-            "Pickup location, drop location, and total kilometers are required"
-          )
-        );
-    }
+//     if (!pickLocation || !dropLocation || !totalKm) {
+//       return res
+//         .status(400)
+//         .json(
+//           new ApiResponse(
+//             400,
+//             null,
+//             "Pickup location, drop location, and total kilometers are required"
+//           )
+//         );
+//     }
 
-    try {
-      const rider = await Rider.findById(riderId);
+//     try {
+//       const rider = await Rider.findById(riderId);
 
-      if (!rider) {
-        return res
-          .status(404)
-          .json(new ApiResponse(404, null, "Rider not found"));
-      }
+//       if (!rider) {
+//         return res
+//           .status(404)
+//           .json(new ApiResponse(404, null, "Rider not found"));
+//       }
 
-      const pickupCoordinates = [pickLocation.longitude, pickLocation.latitude]; // Use [longitude, latitude] format for GeoJSON
+//       const pickupCoordinates = [pickLocation.longitude, pickLocation.latitude]; // Use [longitude, latitude] format for GeoJSON
 
-      const availableDrivers = await Driver.find({
-        current_location: {
-          $near: {
-            $geometry: {
-              type: "Point",
-              coordinates: pickupCoordinates,
-            },
-            $maxDistance: proximityRadius * 1000, // Convert km to meters
-          },
-        },
-        isActive: true,
-        is_on_ride: false,
-      });
+//       const availableDrivers = await Driver.find({
+//         current_location: {
+//           $near: {
+//             $geometry: {
+//               type: "Point",
+//               coordinates: pickupCoordinates,
+//             },
+//             $maxDistance: proximityRadius * 1000, // Convert km to meters
+//           },
+//         },
+//         isActive: true,
+//         is_on_ride: false,
+//       });
 
-      if (availableDrivers.length === 0) {
-        return res
-          .status(200)
-          .json(new ApiResponse(200, [], "No available drivers found"));
-      }
+//       if (availableDrivers.length === 0) {
+//         return res
+//           .status(200)
+//           .json(new ApiResponse(200, [], "No available drivers found"));
+//       }
 
-      const totalPrice = totalKm * perKmCharge;
-      const adminProfit = (adminProfitPercentage / 100) * totalPrice;
-      const driverProfit = totalPrice - adminProfit;
+//       const totalPrice = totalKm * perKmCharge;
+//       const adminProfit = (adminProfitPercentage / 100) * totalPrice;
+//       const driverProfit = totalPrice - adminProfit;
 
-      availableDrivers.forEach((driver) => {
-        if (driver.socketId) {
-          io.to(driver.socketId).emit("newRideRequest", {
-            riderId,
-            riderLocation: pickupCoordinates,
-            driverId: driver._id,
-            driverLocation: driver.current_location.coordinates,
-            dropLocation,
-            totalKm,
-            totalPrice,
-            driverProfit,
-            adminProfit,
-          });
-        }
-      });
+//       availableDrivers.forEach((driver) => {
+//         if (driver.socketId) {
+//           io.to(driver.socketId).emit("newRideRequest", {
+//             riderId,
+//             riderLocation: pickupCoordinates,
+//             driverId: driver._id,
+//             driverLocation: driver.current_location.coordinates,
+//             dropLocation,
+//             totalKm,
+//             totalPrice,
+//             driverProfit,
+//             adminProfit,
+//           });
+//         }
+//       });
 
-      const resData = {
-        availableDrivers,
-        totalPrice,
-        adminProfit,
-        driverProfit,
-        totalKm,
-      };
+//       const resData = {
+//         availableDrivers,
+//         totalPrice,
+//         adminProfit,
+//         driverProfit,
+//         totalKm,
+//       };
 
-      return res
-        .status(200)
-        .json(new ApiResponse(200, resData, "Drivers notified successfully"));
-    } catch (error) {
-      console.error("Error finding available drivers:", error.message);
-      return res
-        .status(500)
-        .json(new ApiResponse(500, null, "Failed to find available drivers"));
-    }
-  });
+//       return res
+//         .status(200)
+//         .json(new ApiResponse(200, resData, "Drivers notified successfully"));
+//     } catch (error) {
+//       console.error("Error finding available drivers:", error.message);
+//       return res
+//         .status(500)
+//         .json(new ApiResponse(500, null, "Failed to find available drivers"));
+//     }
+//   });
+
 
 // Looking Drivers for Ride new functionality
-export const findAvailableDrivers2 = asyncHandler(async (req, res) => {
+export const findAvailableDrivers = asyncHandler(async (req, res) => {
   const { riderId, dropLocation, pickLocation } = req.body;
   const proximityRadius = 5; // Search radius in kilometers
-  const baseFare = 20;
-  const perKmCharge = 15;
-  const adminProfitPercentage = 40;
+  const baseFare = 20; // Base fare for the ride
+  const perKmCharge = 15; // Charge per kilometer
+  const adminProfitPercentage = 40; // Admin's profit percentage
   const averageSpeed = 40; // Average speed in km/h
 
   if (!riderId || !pickLocation || !dropLocation) {
@@ -157,51 +158,62 @@ export const findAvailableDrivers2 = asyncHandler(async (req, res) => {
         );
     }
 
-    const totalKm =
+    // Calculate total distance from pickup to drop
+    const totalKmPickupToDrop =
       geolib.getDistance(
         { latitude: pickLocation.latitude, longitude: pickLocation.longitude },
         { latitude: dropLocation.latitude, longitude: dropLocation.longitude }
       ) / 1000; // Convert meters to kilometers
 
-    const totalPrice = baseFare + totalKm * perKmCharge;
-    const adminProfit = (adminProfitPercentage / 100) * totalPrice;
-    const driverProfit = totalPrice - adminProfit;
+    // Prepare response data for each available driver
+    const resData = await Promise.all(
+      availableDrivers.map(async (driver) => {
+        // Calculate distance from driver's current location to pickup
+        const driverDistanceToPickup =
+          geolib.getDistance(
+            {
+              latitude: driver.current_location.coordinates[1],
+              longitude: driver.current_location.coordinates[0],
+            },
+            { latitude: pickLocation.latitude, longitude: pickLocation.longitude }
+          ) / 1000; // Convert meters to kilometers
 
-    // Add the distance and time from each available driver's location to the pickup point
-    const driversWithTime = availableDrivers.map((driver) => {
-      const driverDistanceToPickup =
-        geolib.getDistance(
-          {
-            latitude: driver.current_location.coordinates[1],
-            longitude: driver.current_location.coordinates[0],
-          },
-          { latitude: pickLocation.latitude, longitude: pickLocation.longitude }
-        ) / 1000; // Convert meters to kilometers
+        // Total distance for pricing
+        const totalDistance = driverDistanceToPickup + totalKmPickupToDrop;
 
-      const estimatedTimeToPickup = driverDistanceToPickup / averageSpeed; // Time in hours
+        // Calculate total price based on both segments
+        const totalPrice = baseFare + totalDistance * perKmCharge;
 
-      return {
-        driverId: driver._id,
-        location: driver.current_location.coordinates,
-        name: driver.name,
-        distanceToPickup: driverDistanceToPickup.toFixed(2) + " km",
-        estimatedTimeToPickup:
-          (estimatedTimeToPickup * 60).toFixed(2) + " mins", // Convert hours to minutes
-      };
-    });
+        // Calculate profits based on the total price
+        const adminProfit = (adminProfitPercentage / 100) * totalPrice;
+        const driverProfit = totalPrice - adminProfit; // Driver's profit
 
-    const resData = {
-      availableDrivers: driversWithTime,
-      totalKm,
-      totalPrice,
-      adminProfit,
-      driverProfit,
+        const estimatedTimeToPickup = driverDistanceToPickup / averageSpeed; // Time in hours
+
+        return {
+          driverId: driver._id,
+          location: driver.current_location.coordinates,
+          name: driver.name,
+          distanceToPickup: driverDistanceToPickup.toFixed(2) + " km",
+          estimatedTimeToPickup:
+            (estimatedTimeToPickup * 60).toFixed(2) + " mins", // Convert hours to minutes
+          totalPrice: totalPrice.toFixed(2), // Total price based on driver location
+          adminProfit: adminProfit.toFixed(2), // Admin profit based on total price
+          driverProfit: driverProfit.toFixed(2), // Driver profit
+          // totalKm: totalKmPickupToDrop.toFixed(2) + " km", // Distance from pickup to drop
+        };
+      })
+    );
+
+    const finalResData = {
+      availableDrivers: resData,
+      totalKmPickupToDrop: totalKmPickupToDrop.toFixed(2) + " km", // Add total distance from pickup to drop to the response
       isAvailable: true,
     };
 
     return res
       .status(200)
-      .json(new ApiResponse(200, resData, "Drivers found successfully"));
+      .json(new ApiResponse(200, finalResData, "Drivers found successfully"));
   } catch (error) {
     console.error("Error finding available drivers:", error.message);
     return res
@@ -209,6 +221,7 @@ export const findAvailableDrivers2 = asyncHandler(async (req, res) => {
       .json(new ApiResponse(500, null, "Failed to find available drivers"));
   }
 });
+
 
 // // Accept Ride request
 // export const acceptRide = (io) =>
@@ -363,7 +376,7 @@ export const findAvailableDrivers2 = asyncHandler(async (req, res) => {
 //   });
 
 // Accept Ride request new api
-export const acceptRide2 = (io) =>
+export const acceptRide = (io) =>
   asyncHandler(async (req, res) => {
     const {
       driverId,
@@ -461,7 +474,7 @@ export const acceptRide2 = (io) =>
           type: "Point",
           coordinates: dropLocation, // [longitude, latitude]
         },
-        total_km: totalKm,
+        total_km: Number(totalKm),
         pickup_otp: pickupOtp,
         drop_otp: dropOtp,
         total_amount: totalPrice, // Use totalPrice from findAvailableDrivers2

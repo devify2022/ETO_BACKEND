@@ -122,6 +122,52 @@ export const setupSocketIO = (server) => {
       }
     });
 
+    // Handle driver selection
+    // Handle driver selection with details
+    socket.on("selectDriverWithDetails", async (rideDetails) => {
+      const {
+        driverId,
+        riderId,
+        pickLocation,
+        dropLocation,
+        totalKmPickupToDrop,
+        totalPrice,
+        distanceToPickup,
+        estimatedTimeToPickup,
+      } = rideDetails;
+
+      try {
+        // Fetch driver and check if they are available to accept the ride
+        const driver = await Driver.findById(driverId);
+        if (driver && driver.isActive && !driver.is_on_ride) {
+          // Emit ride details to the selected driver
+          io.to(driver.socketId).emit("rideRequest", {
+            riderId,
+            pickLocation,
+            dropLocation,
+            totalKmPickupToDrop,
+            totalPrice,
+            distanceToPickup,
+            estimatedTimeToPickup,
+          });
+
+          // Confirm selection to the rider
+          socket.emit("driverSelected", {
+            success: true,
+            message: "Driver selected successfully",
+          });
+        } else {
+          socket.emit("driverSelected", {
+            success: false,
+            message: "Driver is not available",
+          });
+        }
+      } catch (error) {
+        console.error("Error selecting driver:", error.message);
+        socket.emit("error", { message: "Failed to select driver" });
+      }
+    });
+
     // Emit available drivers' location when requested
     socket.on("sendAvailableDriversLocation", async (data) => {
       const { riderId } = data;
@@ -152,6 +198,7 @@ export const setupSocketIO = (server) => {
 
     // Accept Ride Event
     socket.on("acceptRide", async (data) => {
+      console.log(data);
       const { rideId, riderId, driverId } = data;
       if (!rideId || !riderId || !driverId) {
         return socket.emit("error", {
@@ -160,19 +207,18 @@ export const setupSocketIO = (server) => {
       }
 
       try {
-        const ride = await RideDetails.findByIdAndUpdate(
+        await RideDetails.findByIdAndUpdate(
           rideId,
           { driverId, isRide_accept: true, isOn: true },
           { new: true }
         );
 
         const rider = await Rider.findById(riderId);
-        if (rider?.socketId) {
-          io.to(rider.socketId).emit("rideStatus", {
-            isBooked: true,
-            message: "Booking request accepted. Ride successfully booked.",
-          });
-        }
+        console.log("Emiting hello ride status to rider", rider.socketId)
+        io.to(rider.socketId).emit("rideStatus", {
+          isBooked: true,
+          message: "Booking request accepted. Ride successfully booked.",
+        });
       } catch (error) {
         console.error("Error accepting ride:", error.message);
         socket.emit("error", { message: "Failed to accept ride" });

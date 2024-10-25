@@ -1,10 +1,10 @@
 import { Router } from "express";
 import {
   acceptRide,
-  acceptRide2,
+  // acceptRide2,
   cancelRide,
   findAvailableDrivers,
-  findAvailableDrivers2,
+  // findAvailableDrivers2,
   verifyDropOtp,
   verifyPickUpOtp,
 } from "../controllers/rideDetailsController.js"; // Ensure the correct file path
@@ -12,25 +12,25 @@ import {
 const createRouterWithSocket = (io) => {
   const router = Router();
 
+  router.route("/findDrivers").post(findAvailableDrivers); // Using it directly without `io`
+
+  // router
+  //   .route("/acceptRide")
+  //   .post((req, res, next) => acceptRide(io)(req, res, next));
+
   router
     .route("/acceptRide")
     .post((req, res, next) => acceptRide(io)(req, res, next));
-  
-    router
-    .route("/acceptRide2")
-    .post((req, res, next) => acceptRide2(io)(req, res, next));
 
   router
     .route("/rejectRide")
     .delete((req, res, next) => rejectRide(io)(req, res, next));
-  router
-    .route("/findDrivers")
-    .post((req, res, next) => findAvailableDrivers(io)(req, res, next));
 
-    // FIX: No need to pass `io` to `findAvailableDrivers`
-  router
-  .route("/findDrivers2")
-  .get(findAvailableDrivers2); // Using it directly without `io`
+  // router
+  //   .route("/findDrivers")
+  //   .post((req, res, next) => findAvailableDrivers(io)(req, res, next));
+
+  // FIX: No need to pass `io` to `findAvailableDrivers`
 
   router
     .route("/verify-pickup-otp")
