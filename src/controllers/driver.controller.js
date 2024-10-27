@@ -3,8 +3,12 @@ import { Driver } from "../models/driver.model.js";
 import { User } from "../models/user.model.js";
 import { RideDetails } from "../models/rideDetails.model.js";
 import { ETOCard } from "../models/eto.model.js";
+import { WithdrawalLogs } from "../models/withdrawlLogs.model.js";
 import { ApiError } from "../utils/apiError.js";
+import { getCurrTime } from "../utils/getCurrTime.js";
+import { getCurrentLocalDate } from "../utils/getCurrentLocalDate.js";
 import { ApiResponse } from "../utils/apiResponse.js";
+import { mongoose } from "mongoose";
 
 // Create Driver Function
 export const createDriver = asyncHandler(async (req, res) => {
@@ -422,5 +426,227 @@ export const deleteDriver = asyncHandler(async (req, res) => {
     return res
       .status(500)
       .json(new ApiResponse(500, null, "Failed to delete driver"));
+  }
+});
+
+export const getTotalEarningByDate = asyncHandler(async (req, res) => {
+  const { driverId, startDate, endDate } = req.body;
+
+  try {
+    // Convert startDate and endDate to Date objects to ensure proper query comparison
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Adjust endDate to include the full day (23:59:59) if startDate != endDate
+    if (startDate !== endDate) {
+      end.setHours(23, 59, 59, 999); // Include the full range of the day
+    }
+
+    // Create the query condition
+    const dateFilter =
+      startDate === endDate
+        ? { ride_end_time: { $eq: start } } // Exact date match for same-day queries
+        : { ride_end_time: { $gte: start, $lte: end } }; // Date range query
+
+    // Perform the aggregation to sum the driver profits for the given date(s)
+    const result = await RideDetails.aggregate([
+      {
+        $match: {
+          driverId: new mongoose.Types.ObjectId(driverId),
+          ...dateFilter,
+        },
+      },
+      {
+        $group: {
+          _id: null, // No grouping by field; just sum the total
+          totalEarnings: { $sum: "$driver_profit" },
+        },
+      },
+    ]);
+
+    let totalEarnings = result.length > 0 ? result[0].totalEarnings : 0;
+    totalEarnings = Math.ceil(totalEarnings);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { totalEarnings },
+          "Total earnings fetched successfully"
+        )
+      );
+  } catch (error) {
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to fetch total earnings"));
+  }
+});
+
+export const getRecentRides = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rides = await RideDetails.find({
+      driverId: new mongoose.Types.ObjectId(id),
+    })
+      .sort({ ride_end_time: 1 }) // Sort by most recent rides
+      .limit(5); // Get the last 5 rides
+
+    console.log({ rides });
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          rides,
+          rides.length > 0
+            ? "Last 5 Rides Fetched Successfully"
+            : "No Rides Found"
+        )
+      );
+  } catch (error) {
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to get recent rides"));
+  }
+});
+
+export const getTotalWithdrawalsByDate = asyncHandler(async (req, res) => {
+  const { driverId, fromDate, toDate } = req.body;
+  try {
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+
+    // Ensure `toDate` includes the entire day
+    to.setHours(23, 59, 59, 999);
+
+    console.log("From:", from);
+    console.log("To:", to);
+    console.log("driverId", driverId);
+
+    const matchCondition =
+      fromDate === toDate
+        ? { withdrawalDate: { $eq: from } } // If same date, use $eq
+        : {
+            withdrawalDate: {
+              $gte: from, // Greater than or equal to fromDate
+              $lte: to, // Less than or equal to toDate
+            },
+          };
+
+    const result = await WithdrawalLogs.aggregate([
+      {
+        $match: {
+          driverId: new mongoose.Types.ObjectId(driverId),
+          ...matchCondition,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalWithdrawals: { $sum: "$withdrawalAmount" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          totalWithdrawals: 1,
+        },
+      },
+    ]);
+
+    const totalAmount = result.length > 0 ? result[0].totalWithdrawals : 0;
+    console.log(`Total Withdrawals: ${result}`);
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, result, "Total Amount fetched"));
+  } catch (error) {
+    console.error("Error fetching withdrawals:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to get recent rides"));
+  }
+});
+
+export const createWithdrawalLogs = asyncHandler(async (req, res) => {
+  try {
+    const { driverId, withdrawalAmount, mode } = req.body;
+
+    if (!driverId || !withdrawalAmount || !mode) {
+      return res.status(400).json({
+        success: false,
+        message: "Driver ID, withdrawal amount, and mode are required.",
+      });
+    }
+
+    // Validate mode
+    const validModes = ["cash", "upi", "bank transfer"];
+    if (!validModes.includes(mode)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid withdrawal mode. Allowed values: ${validModes.join(", ")}.`,
+      });
+    }
+
+    // Check if driver exists and has sufficient earnings
+    const driver = await Driver.findById(driverId);
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: "Driver not found.",
+      });
+    }
+
+    if (driver.total_earning < withdrawalAmount) {
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient earnings for withdrawal.",
+      });
+    }
+
+    // Prepare withdrawal data based on mode
+    const withdrawalData = {
+      driverId: new mongoose.Types.ObjectId(driverId),
+      withdrawalAmount,
+      withdrawalDate: getCurrentLocalDate(),
+      withdrawalTime: getCurrTime(),
+      withdrawalMode: mode,
+    };
+
+    console.log({ withdrawalData });
+
+    if (mode === "upi") {
+      withdrawalData.upiDetails = { upiId: "user@upi" }; // Example UPI ID
+    } else if (mode === "bank transfer") {
+      withdrawalData.bankDetails = {
+        accountNumber: "123456789",
+        bankName: "Bank of Example",
+        ifscCode: "IFSC1234",
+      };
+    }
+
+    // Update driver's total earnings
+    await Driver.findByIdAndUpdate(
+      driverId,
+      { $inc: { total_earning: -withdrawalAmount } },
+      { new: true }
+    );
+
+    // Save withdrawal log
+    const newWithdrawal = new WithdrawalLogs(withdrawalData);
+    await newWithdrawal.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Withdrawal log created successfully",
+      data: newWithdrawal,
+    });
+  } catch (error) {
+    console.error("Error creating withdrawal log:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create withdrawal log",
+      error: error.message,
+    });
   }
 });

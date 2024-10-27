@@ -11,12 +11,18 @@ import {
   getDriverRideById,
   getRideHistory,
   updateDriverProfile,
+  getRecentRides,
+  getTotalEarningByDate,
+  getTotalWithdrawalsByDate,
+  createWithdrawalLogs,
+
 } from "../controllers/driver.controller.js";
 
 const router = Router();
 
 // Place the more specific routes before the dynamic ones
 router.route("/createDriver").post(createDriver);
+router.route("/createWithdrawlLogs").post(createWithdrawalLogs);
 router.route("/active").get(getAllActiveDrivers);
 router.route("/activate/:id").put(activateDriver);
 router.route("/deactivate/:id").put(deactivateDriver);
@@ -26,8 +32,11 @@ router.route("/rideDetails/:id").get(getDriverRideById);
 router.route("/update/:id").patch(updateDriverProfile);
 router.route("/currentRide/:id").get(getCurrentRide);
 router.route("/rideHistory/:id").get(getRideHistory);
+router.route("/getTotalWithdrawalsByDate").post(getTotalWithdrawalsByDate);
 
 // The dynamic ID route should be last to avoid conflicts
+router.route("/getRecentRides/:id").get(getRecentRides);
+router.route("/getTotalEarningByDate").get(getTotalEarningByDate);
 router.route("/:id").get(getDriverById);
 
 export default router;

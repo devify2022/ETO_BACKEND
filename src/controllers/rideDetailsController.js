@@ -6,6 +6,11 @@ import generateOtp from "../utils/otpGenerate.js";
 import { RideDetails } from "../models/rideDetails.model.js";
 import mongoose from "mongoose";
 import geolib from "geolib";
+import dotenv from "dotenv";
+
+dotenv.config({
+  path: "./env",
+});
 
 // Looking Drivers for Ride
 // export const findAvailableDrivers = (io) =>
@@ -103,14 +108,13 @@ import geolib from "geolib";
 //     }
 //   });
 
-
 // Looking Drivers for Ride new functionality
 export const findAvailableDrivers = asyncHandler(async (req, res) => {
   const { riderId, dropLocation, pickLocation } = req.body;
   const proximityRadius = 5; // Search radius in kilometers
   const baseFare = 20; // Base fare for the ride
-  const perKmCharge = 15; // Charge per kilometer
-  const adminProfitPercentage = 40; // Admin's profit percentage
+  const perKmCharge =  process.env.PER_KM_CHARGE; // Charge per kilometer
+  const adminProfitPercentage = process.env.ADMIN_PERCENTAGE; // Admin's profit percentage
   const averageSpeed = 40; // Average speed in km/h
 
   if (!riderId || !pickLocation || !dropLocation) {
@@ -175,7 +179,10 @@ export const findAvailableDrivers = asyncHandler(async (req, res) => {
               latitude: driver.current_location.coordinates[1],
               longitude: driver.current_location.coordinates[0],
             },
-            { latitude: pickLocation.latitude, longitude: pickLocation.longitude }
+            {
+              latitude: pickLocation.latitude,
+              longitude: pickLocation.longitude,
+            }
           ) / 1000; // Convert meters to kilometers
 
         // Total distance for pricing
@@ -221,7 +228,6 @@ export const findAvailableDrivers = asyncHandler(async (req, res) => {
       .json(new ApiResponse(500, null, "Failed to find available drivers"));
   }
 });
-
 
 // // Accept Ride request
 // export const acceptRide = (io) =>
@@ -454,7 +460,7 @@ export const acceptRide = (io) =>
       }
 
       // Calculate admin and driver profits based on the total price
-      const adminPercentage = 40; // Admin percentage
+      const adminPercentage = process.env.ADMIN_PERCENTAGE; // Admin percentage
       const adminAmount = (adminPercentage / 100) * totalPrice;
       const driverProfit = totalPrice - adminAmount;
 
@@ -484,6 +490,11 @@ export const acceptRide = (io) =>
       });
 
       await newRide.save();
+
+      await Driver.findByIdAndUpdate(
+        driverId,
+        { $inc: { total_earning: driverProfit } } // Increment total_earning by driverProfit
+      );
 
       // Emit ride details to the rider and driver via Socket.IO
       if (rider.socketId) {
