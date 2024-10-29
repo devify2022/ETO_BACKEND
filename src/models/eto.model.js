@@ -51,6 +51,8 @@ const ETOCardSchema = new Schema({
     type: String,
     default: "100",
   },
-});
+},
+{ timestamps: true }
+);
 
 export const ETOCard = mongoose.model("ETOCard", ETOCardSchema);

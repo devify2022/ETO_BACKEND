@@ -117,6 +117,8 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
           otpdata: otpCredentials.data,
         };
 
+        console.log(otpCredentials)
+
         return res
           .status(200)
           .json(new ApiResponse(200, data, "Logged in successfully, OTP sent"));

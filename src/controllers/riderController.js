@@ -60,11 +60,7 @@ export const getCurrentRide = asyncHandler(async (req, res) => {
 
   try {
     // Find the rider by ID and ensure they're on a ride
-    const rider = await Rider.findOne({
-      _id: id,
-      is_on_ride: true, // Ensure the rider is currently on a ride
-      current_ride_id: { $exists: true, $ne: null }, // Ensure current_ride_id exists
-    });
+    const rider = await Rider.findById(id);
 
     if (!rider) {
       return res
@@ -75,9 +71,9 @@ export const getCurrentRide = asyncHandler(async (req, res) => {
     }
 
     // Retrieve the ride details using the current_ride_id
-    const rideDetails = await RideDetails.findById(rider.current_ride_id);
+    const currentRide = await RideDetails.findOne({ riderId: id, isOn: true });
 
-    if (!rideDetails) {
+    if (!currentRide) {
       return res
         .status(404)
         .json(new ApiResponse(404, null, "Ride details not found"));
@@ -86,7 +82,7 @@ export const getCurrentRide = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(
-        new ApiResponse(200, rideDetails, "Current ride retrieved successfully")
+        new ApiResponse(200, currentRide, "Current ride retrieved successfully")
       );
   } catch (error) {
     console.error("Error retrieving current ride:", error.message);

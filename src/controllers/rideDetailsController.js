@@ -113,9 +113,10 @@ export const findAvailableDrivers = asyncHandler(async (req, res) => {
   const { riderId, dropLocation, pickLocation } = req.body;
   const proximityRadius = 5; // Search radius in kilometers
   const baseFare = 20; // Base fare for the ride
-  const perKmCharge =  process.env.PER_KM_CHARGE; // Charge per kilometer
-  const adminProfitPercentage = process.env.ADMIN_PERCENTAGE; // Admin's profit percentage
+  const perKmCharge =  process.env.PER_KM_CHARGE || 15; // Charge per kilometer
+  const adminProfitPercentage = process.env.ADMIN_PERCENTAGE || 40; // Admin's profit percentage
   const averageSpeed = 40; // Average speed in km/h
+
 
   if (!riderId || !pickLocation || !dropLocation) {
     return res
@@ -217,6 +218,8 @@ export const findAvailableDrivers = asyncHandler(async (req, res) => {
       totalKmPickupToDrop: totalKmPickupToDrop.toFixed(2) + " km", // Add total distance from pickup to drop to the response
       isAvailable: true,
     };
+
+    // console.log(resData)
 
     return res
       .status(200)
@@ -498,6 +501,7 @@ export const acceptRide = (io) =>
 
       // Emit ride details to the rider and driver via Socket.IO
       if (rider.socketId) {
+        console.log("emiting accept data to rider", rider.socketId)
         io.to(rider.socketId).emit("rideAccepted", {
           driverId: driver._id,
           riderId: riderId,
