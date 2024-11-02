@@ -128,7 +128,7 @@ export const setupSocketIO = (server) => {
       const {
         driverId,
         riderId,
-        pickLocation,
+        pickUpLocation,
         dropLocation,
         totalKmPickupToDrop,
         totalPrice,
@@ -140,10 +140,10 @@ export const setupSocketIO = (server) => {
         // Fetch driver and check if they are available to accept the ride
         const driver = await Driver.findById(driverId);
         if (driver && driver.isActive && !driver.is_on_ride) {
-          // Emit ride details to the selected driver
+          console.log("Emiting send request", driver.socketId)
           io.to(driver.socketId).emit("rideRequest", {
             riderId,
-            pickLocation,
+            pickUpLocation,
             dropLocation,
             totalKmPickupToDrop,
             totalPrice,
@@ -214,7 +214,7 @@ export const setupSocketIO = (server) => {
         );
 
         const rider = await Rider.findById(riderId);
-        console.log("Emiting hello ride status to rider", rider.socketId)
+        console.log("Emiting hello ride status to rider", rider.socketId);
         io.to(rider.socketId).emit("rideStatus", {
           isBooked: true,
           message: "Booking request accepted. Ride successfully booked.",

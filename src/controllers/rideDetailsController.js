@@ -15,7 +15,7 @@ dotenv.config({
 // Looking Drivers for Ride
 // export const findAvailableDrivers = (io) =>
 //   asyncHandler(async (req, res, next) => {
-//     const { riderId, dropLocation, pickLocation, totalKm } = req.body;
+//     const { riderId, dropLocation, pickUpLocation, totalKm } = req.body;
 //     const proximityRadius = 5; // Define radius to search for nearby drivers (in kilometers)
 //     const perKmCharge = 10; // Charge per kilometer
 //     const adminProfitPercentage = 40; // Admin profit percentage (40%)
@@ -26,7 +26,7 @@ dotenv.config({
 //         .json(new ApiResponse(400, null, "Rider ID is required"));
 //     }
 
-//     if (!pickLocation || !dropLocation || !totalKm) {
+//     if (!pickUpLocation || !dropLocation || !totalKm) {
 //       return res
 //         .status(400)
 //         .json(
@@ -47,7 +47,7 @@ dotenv.config({
 //           .json(new ApiResponse(404, null, "Rider not found"));
 //       }
 
-//       const pickupCoordinates = [pickLocation.longitude, pickLocation.latitude]; // Use [longitude, latitude] format for GeoJSON
+//       const pickupCoordinates = [pickUpLocation.longitude, pickUpLocation.latitude]; // Use [longitude, latitude] format for GeoJSON
 
 //       const availableDrivers = await Driver.find({
 //         current_location: {
@@ -110,15 +110,14 @@ dotenv.config({
 
 // Looking Drivers for Ride new functionality
 export const findAvailableDrivers = asyncHandler(async (req, res) => {
-  const { riderId, dropLocation, pickLocation } = req.body;
+  const { riderId, dropLocation, pickUpLocation } = req.body;
   const proximityRadius = 5; // Search radius in kilometers
   const baseFare = 20; // Base fare for the ride
-  const perKmCharge =  process.env.PER_KM_CHARGE || 15; // Charge per kilometer
+  const perKmCharge = process.env.PER_KM_CHARGE || 15; // Charge per kilometer
   const adminProfitPercentage = process.env.ADMIN_PERCENTAGE || 40; // Admin's profit percentage
   const averageSpeed = 40; // Average speed in km/h
 
-
-  if (!riderId || !pickLocation || !dropLocation) {
+  if (!riderId || !pickUpLocation || !dropLocation) {
     return res
       .status(400)
       .json(
@@ -138,7 +137,10 @@ export const findAvailableDrivers = asyncHandler(async (req, res) => {
         .json(new ApiResponse(404, null, "Rider not found"));
     }
 
-    const pickupCoordinates = [pickLocation.longitude, pickLocation.latitude];
+    const pickupCoordinates = [
+      pickUpLocation.longitude,
+      pickUpLocation.latitude,
+    ];
 
     const availableDrivers = await Driver.find({
       current_location: {
@@ -166,7 +168,10 @@ export const findAvailableDrivers = asyncHandler(async (req, res) => {
     // Calculate total distance from pickup to drop
     const totalKmPickupToDrop =
       geolib.getDistance(
-        { latitude: pickLocation.latitude, longitude: pickLocation.longitude },
+        {
+          latitude: pickUpLocation.latitude,
+          longitude: pickUpLocation.longitude,
+        },
         { latitude: dropLocation.latitude, longitude: dropLocation.longitude }
       ) / 1000; // Convert meters to kilometers
 
@@ -181,8 +186,8 @@ export const findAvailableDrivers = asyncHandler(async (req, res) => {
               longitude: driver.current_location.coordinates[0],
             },
             {
-              latitude: pickLocation.latitude,
-              longitude: pickLocation.longitude,
+              latitude: pickUpLocation.latitude,
+              longitude: pickUpLocation.longitude,
             }
           ) / 1000; // Convert meters to kilometers
 
@@ -501,7 +506,7 @@ export const acceptRide = (io) =>
 
       // Emit ride details to the rider and driver via Socket.IO
       if (rider.socketId) {
-        console.log("emiting accept data to rider", rider.socketId)
+        console.log("emiting accept data to rider", rider.socketId);
         io.to(rider.socketId).emit("rideAccepted", {
           driverId: driver._id,
           riderId: riderId,
@@ -668,7 +673,7 @@ export const verifyPickUpOtp = (io) =>
       // Emit updates to both the rider and driver
       if (rider.socketId) {
         console.log(
-          `sendinggggg data after pickup otp verify to rider ${rider.socketId}`
+          `sendinggggggg data after pickup otp verify to rider ${rider.socketId}`
         );
         io.to(rider.socketId).emit("pickupRider", {
           message: "Pickup OTP verified. Ride is now active.",

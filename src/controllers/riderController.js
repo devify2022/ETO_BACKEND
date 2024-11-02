@@ -79,6 +79,7 @@ export const getCurrentRide = asyncHandler(async (req, res) => {
         .json(new ApiResponse(404, null, "Ride details not found"));
     }
 
+    console.log("Rider Current Ride", currentRide);
     return res
       .status(200)
       .json(

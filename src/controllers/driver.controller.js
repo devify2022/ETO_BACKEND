@@ -9,6 +9,7 @@ import { getCurrTime } from "../utils/getCurrTime.js";
 import { getCurrentLocalDate } from "../utils/getCurrentLocalDate.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { mongoose } from "mongoose";
+import { Rider } from "../models/rider.model.js";
 
 // Create Driver Function
 export const createDriver = asyncHandler(async (req, res) => {
@@ -168,6 +169,10 @@ export const getCurrentRide = asyncHandler(async (req, res) => {
   }
 
   try {
+
+    let resData = null;
+
+
     // Find the driver by ID
     const driver = await Driver.findById(id);
     if (!driver) {
@@ -176,26 +181,37 @@ export const getCurrentRide = asyncHandler(async (req, res) => {
         .json(new ApiResponse(404, null, "Driver not found"));
     }
 
-    // // Check if the driver is on a ride
-    // if (!driver.current_ride_id) {
-    //   return res
-    //     .status(404)
-    //     .json(new ApiResponse(404, null, "No ongoing ride for this driver"));
-    // }
-
     // Fetch the current ride details
     const currentRide = await RideDetails.findOne({ driverId: id, isOn: true });
-    if (!currentRide) {
+
+    const rider = await Rider.findById(currentRide?.riderId);
+
+    // console.log(currentRide)
+    // console.log(rider)
+
+    resData = {
+      currentRide,
+      riderLocation: rider.current_location,
+    };
+
+    console.log("Ride details",currentRide)
+    // console.log("Rider",rider.current_location)
+
+    if (!currentRide && !rider) {
       return res
         .status(404)
-        .json(new ApiResponse(404, null, "Current ride details not found"));
+        .json(
+          new ApiResponse(404, resData, "Current ride details not found")
+        );
     }
+
+    // console.log("Ride details",resData)
 
     // Return the current ride details
     return res
       .status(200)
       .json(
-        new ApiResponse(200, currentRide, "Current ride retrieved successfully")
+        new ApiResponse(200, resData, "Current ride retrieved successfully")
       );
   } catch (error) {
     console.error("Error retrieving current ride:", error.message);
