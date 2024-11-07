@@ -548,62 +548,37 @@ export const acceptRide = (io) =>
 // Reject Ride request
 export const rejectRide = (io) =>
   asyncHandler(async (req, res) => {
-    const { driverId, riderId, rideId } = req.body;
+    const { driverId, riderId } = req.body;
 
     // Validate input data
-    if (!driverId || !riderId || !rideId) {
+    if (!driverId || !riderId) {
       return res
         .status(400)
         .json(
-          new ApiResponse(
-            400,
-            null,
-            "Driver ID, Rider ID, and Ride ID are required"
-          )
+          new ApiResponse(400, null, "Driver ID and Rider ID are required")
         );
     }
 
     try {
-      // Fetch rider, driver, and ride details from the database
       const rider = await Rider.findById(riderId);
       const driver = await Driver.findById(driverId);
-      const ride = await RideDetails.findById(rideId);
 
-      // Handle if any of the entities are not found
+      // Check existence of rider and driver
       if (!rider) {
         return res
           .status(404)
           .json(new ApiResponse(404, null, "Rider not found"));
       }
-
       if (!driver) {
         return res
           .status(404)
           .json(new ApiResponse(404, null, "Driver not found"));
       }
 
-      if (!ride) {
-        return res
-          .status(404)
-          .json(new ApiResponse(404, null, "Ride not found"));
-      }
-
-      // Check if the ride has already started, which makes it non-rejectable
-      if (ride.isRide_started) {
-        return res
-          .status(400)
-          .json(new ApiResponse(400, null, "Ride has already started"));
-      }
-
-      // Mark the ride as rejected by setting `isRide_accept` to false
-      ride.isRide_accept = false;
-      ride.isRide_ended = false; // Mark ride as ended after rejection
-      await ride.save();
-
       // Notify the rider via socket if they have a socket ID
       if (rider.socketId) {
         io.to(rider.socketId).emit("rideRejected", {
-          rideId,
+          isBooked: false,
           message: "Your ride request has been rejected by the driver",
         });
       }
@@ -611,9 +586,8 @@ export const rejectRide = (io) =>
       // Send success response
       return res
         .status(200)
-        .json(new ApiResponse(200, ride, "Ride rejected successfully"));
+        .json(new ApiResponse(200, null, "Ride request rejected successfully"));
     } catch (error) {
-      // Handle errors during the process
       console.error("Error rejecting the ride:", error.message);
       return res
         .status(500)

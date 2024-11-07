@@ -4,6 +4,7 @@ import {
   // acceptRide2,
   cancelRide,
   findAvailableDrivers,
+  rejectRide,
   // findAvailableDrivers2,
   verifyDropOtp,
   verifyPickUpOtp,
@@ -24,7 +25,7 @@ const createRouterWithSocket = (io) => {
 
   router
     .route("/rejectRide")
-    .delete((req, res, next) => rejectRide(io)(req, res, next));
+    .post((req, res, next) => rejectRide(io)(req, res, next));
 
   // router
   //   .route("/findDrivers")

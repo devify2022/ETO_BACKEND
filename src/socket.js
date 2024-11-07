@@ -214,7 +214,7 @@ export const setupSocketIO = (server) => {
         );
 
         const rider = await Rider.findById(riderId);
-        console.log("Emiting hello ride status to rider", rider.socketId);
+        console.log("Emiting accept status to rider", rider.socketId);
         io.to(rider.socketId).emit("rideStatus", {
           isBooked: true,
           message: "Booking request accepted. Ride successfully booked.",
