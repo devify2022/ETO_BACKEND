@@ -832,6 +832,7 @@ export const cancelRide = (io) =>
       // Notify the driver that the ride has been canceled via Socket.io
       if (driver.socketId) {
         io.to(driver.socketId).emit("cancelRide", {
+          isCancel: true,
           message: "Ride Canceled",
         });
       }
