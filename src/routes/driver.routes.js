@@ -17,6 +17,7 @@ import {
   createWithdrawalLogs,
 
 } from "../controllers/driver.controller.js";
+import { getETOCardById } from "../controllers/etoController.js";
 
 const router = Router();
 
@@ -24,6 +25,7 @@ const router = Router();
 router.route("/createDriver").post(createDriver);
 router.route("/createWithdrawlLogs").post(createWithdrawalLogs);
 router.route("/active").get(getAllActiveDrivers);
+router.route("/eto-card/:id").get(getETOCardById);
 router.route("/activate/:id").put(activateDriver);
 router.route("/deactivate/:id").put(deactivateDriver);
 router.route("/delete/:id").delete(deleteDriver);

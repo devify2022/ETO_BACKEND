@@ -305,6 +305,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
 
       const msg = {
         role: "driver",
+        isVerified: user.isVerified,
         isNewDriver: !driverDetails, // New driver if no details found
         phone: user.phone,
         accessToken,
