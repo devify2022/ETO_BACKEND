@@ -16,7 +16,7 @@ const io = setupSocketIO(server);
 
 app.use(
   cors({
-    origin: "http://192.168.31.227:8081", // Set your React app origin
+    origin: "http://10.0.2.2:8081", // Set your React app origin
     credentials: true,
   })
 );
@@ -50,7 +50,6 @@ app.get("/", (req, res) => {
 app.get("/test", (req, res) => {
   res.send("Welcome to00 EASY (TRIAL) API!");
 });
-
 
 // Error handling middleware
 app.use(errorHandler);
