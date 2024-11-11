@@ -147,7 +147,7 @@ export const getRiderRideHistory = asyncHandler(async (req, res) => {
     const rides = await RideDetails.find({ riderId: id })
       .populate({
         path: "driverId",
-        select: "name", // Select only the driver's name
+        select: "name driver_photo", // Select only the driver's name
       })
       .sort({ createdAt: -1 }); // Sort by most recent rides
 
