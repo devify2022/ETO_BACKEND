@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import { Driver } from "./models/driver.model.js";
 import { Rider } from "./models/rider.model.js";
 import { RideDetails } from "./models/rideDetails.model.js";
+import geolib from "geolib";
 
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
@@ -227,6 +228,8 @@ export const setupSocketIO = (server) => {
 
     // Emit driver location to rider after ride acceptance
     socket.on("driverLocationUpdateAfterAccept", async (data) => {
+      console.log("Received data:", data);
+
       const {
         driverLocation,
         riderId,
@@ -234,20 +237,61 @@ export const setupSocketIO = (server) => {
         pickupLocation,
         dropLocation,
       } = data;
-      // console.log("hello location update data", data);
+
+      if (!pickupLocation || !dropLocation) {
+        console.error("Pickup or Drop Location is missing");
+        return;
+      }
+
+      console.log("Pickup Location:", pickupLocation);
+      console.log("Drop Location:", dropLocation);
 
       if (riderId) {
         try {
           const rider = await Rider.findById(riderId);
+
           if (rider?.socketId) {
-            console.log(
-              `Emittinggggggggggggggggggggggggggggggggg location to rider socket: ${rider.socketId}`
+            // Calculate distance in meters from driver location to rider location
+            const driverToRiderDistanceMeters = geolib.getDistance(
+              {
+                latitude: driverLocation.latitude,
+                longitude: driverLocation.longitude,
+              },
+              {
+                latitude: riderLocation.coordinates[1], // riderLocation is [longitude, latitude]
+                longitude: riderLocation.coordinates[0],
+              }
             );
+
+            console.log(
+              "Driver Distance to Rider (meters):",
+              driverToRiderDistanceMeters
+            );
+
+            // Convert distance to kilometers
+            const driverToRiderDistanceKm = driverToRiderDistanceMeters / 1000;
+            console.log(
+              "Driver Distance to Rider (kilometers):",
+              driverToRiderDistanceKm
+            );
+
+            const averageSpeed = 40; // km/h
+            const estimatedTimeToRiderHours =
+              driverToRiderDistanceKm / averageSpeed;
+            const estimatedTimeToRiderMinutes = estimatedTimeToRiderHours * 60;
+
+            console.log(
+              "Estimated Time to Rider (minutes):",
+              estimatedTimeToRiderMinutes.toFixed(2)
+            );
+
             io.to(rider.socketId).emit("driverLocationUpdate", {
-              driverLocation: driverLocation,
-              riderLocation: riderLocation,
-              pickupLocation: pickupLocation,
-              dropLocation: dropLocation,
+              driverLocation,
+              riderLocation,
+              pickupLocation,
+              dropLocation,
+              estimatedTimeToRider:
+                estimatedTimeToRiderMinutes.toFixed(2) + " mins",
               message: "Driver's location after ride acceptance",
             });
           }

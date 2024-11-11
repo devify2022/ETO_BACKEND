@@ -5,6 +5,7 @@ import {
   cancelRide,
   findAvailableDrivers,
   rejectRide,
+  updatePaymentMode,
   // findAvailableDrivers2,
   verifyDropOtp,
   verifyPickUpOtp,
@@ -42,6 +43,10 @@ const createRouterWithSocket = (io) => {
   router
     .route("/cancel-ride")
     .delete((req, res, next) => cancelRide(io)(req, res, next));
+
+  router
+    .route("/update-payment-mode")
+    .patch((req, res, next) => updatePaymentMode(io)(req, res, next));
 
   return router;
 };

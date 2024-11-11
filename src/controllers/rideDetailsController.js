@@ -847,3 +847,98 @@ export const cancelRide = (io) =>
         .json(new ApiResponse(500, null, "Failed to cancel ride"));
     }
   });
+
+// Update Payment Mode and Driver's Wallet
+export const updatePaymentMode = (io) =>
+  asyncHandler(async (req, res) => {
+    const { rideId, paymentMode } = req.body;
+
+    if (!rideId || !paymentMode) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(400, null, "Ride ID and Payment Mode are required")
+        );
+    }
+
+    // Check if paymentMode is valid
+    if (!["cash", "online"].includes(paymentMode)) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "Invalid payment mode"));
+    }
+
+    try {
+      // Find the ride details by rideId
+      const ride = await RideDetails.findById(rideId);
+      if (!ride) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, null, "Ride not found"));
+      }
+
+      // Get the driverId and riderId from the ride details
+      const { driverId, riderId } = ride;
+
+      // Find the driver by driverId
+      const driver = await Driver.findById(driverId);
+      if (!driver) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, null, "Driver not found"));
+      }
+
+      // Find the rider by riderId (Optional for validation or other logic)
+      const rider = await Rider.findById(riderId);
+      if (!rider) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, null, "Rider not found"));
+      }
+
+      // Update the payment mode in the ride details
+      ride.payment_mode = paymentMode;
+      await ride.save();
+
+      // Update the driver's wallet based on payment mode
+      if (paymentMode === "cash") {
+        // Add total amount to the driver's cash wallet
+        driver.cash_wallet += ride.total_amount;
+      } else if (paymentMode === "online") {
+        // Add total amount to the driver's online wallet
+        driver.online_wallet += ride.total_amount;
+      }
+
+      // Update total earnings of the driver
+      driver.total_earning += ride.driver_profit;
+
+      // Save the updated driver details
+      await driver.save();
+
+      // Emit updates to the rider and driver (optional)
+      if (rider.socketId) {
+        io.to(rider.socketId).emit("paymentModeUpdated", {
+          message: "Payment mode updated successfully",
+          rideId: ride._id,
+          paymentMode,
+        });
+      }
+
+      if (driver.socketId) {
+        io.to(driver.socketId).emit("paymentModeUpdated", {
+          message: "Payment mode updated successfully",
+          rideId: ride._id,
+          paymentMode,
+        });
+      }
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, ride, "Payment mode updated successfully"));
+    } catch (error) {
+      console.error("Error updating payment mode:", error.message);
+      return res
+        .status(500)
+        .json(new ApiResponse(500, null, "Failed to update payment mode"));
+    }
+  });

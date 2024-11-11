@@ -192,7 +192,7 @@ export const getCurrentRide = asyncHandler(async (req, res) => {
       riderLocation: rider.current_location,
     };
 
-    console.log("Ride details", currentRide);
+    // console.log("Ride details", currentRide);
     // console.log("Rider",rider.current_location)
 
     if (!currentRide && !rider) {

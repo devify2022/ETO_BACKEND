@@ -75,7 +75,7 @@ const rideDetailsSchema = new Schema(
     },
     payment_mode: {
       type: String,
-      enum: ["cash", "card", "online"],
+      enum: ["cash", "online"],
     },
     isPayment_done: {
       type: Boolean,
