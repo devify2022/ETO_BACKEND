@@ -144,9 +144,12 @@ export const getRiderRideHistory = asyncHandler(async (req, res) => {
     }
 
     // Retrieve the rides associated with the rider using riderId
-    const rides = await RideDetails.find({ riderId: id }).sort({
-      createdAt: -1,
-    }); // Sort by most recent rides
+    const rides = await RideDetails.find({ riderId: id })
+      .populate({
+        path: "driverId",
+        select: "name", // Select only the driver's name
+      })
+      .sort({ createdAt: -1 }); // Sort by most recent rides
 
     if (!rides.length) {
       return res
