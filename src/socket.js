@@ -6,7 +6,7 @@ import { RideDetails } from "./models/rideDetails.model.js";
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: "http://10.0.2.2:8081", // Set your React app origin
+      origin: "http://192.168.31.227:8081", // Set your React app origin
       credentials: true,
     },
   });

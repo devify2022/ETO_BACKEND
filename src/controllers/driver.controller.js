@@ -169,9 +169,7 @@ export const getCurrentRide = asyncHandler(async (req, res) => {
   }
 
   try {
-
     let resData = null;
-
 
     // Find the driver by ID
     const driver = await Driver.findById(id);
@@ -194,15 +192,13 @@ export const getCurrentRide = asyncHandler(async (req, res) => {
       riderLocation: rider.current_location,
     };
 
-    console.log("Ride details",currentRide)
+    console.log("Ride details", currentRide);
     // console.log("Rider",rider.current_location)
 
     if (!currentRide && !rider) {
       return res
         .status(404)
-        .json(
-          new ApiResponse(404, resData, "Current ride details not found")
-        );
+        .json(new ApiResponse(404, resData, "Current ride details not found"));
     }
 
     // console.log("Ride details",resData)
@@ -504,10 +500,13 @@ export const getRecentRides = asyncHandler(async (req, res) => {
     const rides = await RideDetails.find({
       driverId: new mongoose.Types.ObjectId(id),
     })
-      .sort({ ride_end_time: 1 }) // Sort by most recent rides
+      .populate({
+        path: "driverId",
+        select: "name driver_photo", // Include driver's name and photo
+      })
+      .sort({ ride_end_time: -1 }) // Sort by most recent rides
       .limit(5); // Get the last 5 rides
 
-    console.log({ rides });
     return res
       .status(200)
       .json(
@@ -520,6 +519,7 @@ export const getRecentRides = asyncHandler(async (req, res) => {
         )
       );
   } catch (error) {
+    console.error("Error retrieving recent rides:", error.message);
     return res
       .status(500)
       .json(new ApiResponse(500, null, "Failed to get recent rides"));
