@@ -117,7 +117,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
           otpdata: otpCredentials.data,
         };
 
-        console.log(otpCredentials)
+        console.log(otpCredentials);
 
         return res
           .status(200)
@@ -310,7 +310,15 @@ export const verifyOtp = asyncHandler(async (req, res) => {
         phone: user.phone,
         accessToken,
         refreshToken,
-        userDetails: driverDetails || user, // Send driver details if available
+        userDetails: driverDetails || {
+          userId: user._id,
+          phone: user.phone,
+          isVerified: user.isVerified,
+          isDriver: user.isDriver,
+          isAdmin: user.isAdmin,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        }, // Send driver details if available
       };
 
       return res

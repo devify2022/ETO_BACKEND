@@ -252,10 +252,10 @@ export const acceptRide = (io) =>
 
       await newRide.save();
 
-      await Driver.findByIdAndUpdate(
-        driverId,
-        { $inc: { total_earning: driverProfit } } // Increment total_earning by driverProfit
-      );
+      // await Driver.findByIdAndUpdate(
+      //   driverId,
+      //   { $inc: { total_earning: driverProfit } } // Increment total_earning by driverProfit
+      // );
 
       // Emit ride details to the rider and driver via Socket.IO
       if (rider.socketId) {
