@@ -7,7 +7,7 @@ export const getETOCardById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
-    const etoCard = await ETOCard.findOne({ driverId: id });
+    const etoCard = await ETOCard.findOne({ userId: id });
 
     if (!etoCard) {
       return res

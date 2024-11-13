@@ -5,6 +5,10 @@ const ETOCardSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: "Driver",
   },
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+  },
   id_details: {
     name: {
       type: String,
@@ -45,7 +49,6 @@ const ETOCardSchema = new Schema({
   },
   eto_id_num: {
     type: String,
-    default: "Sk Aktar ke phone korun bole debe",
   },
   helpLine_num: {
     type: String,

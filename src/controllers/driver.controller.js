@@ -10,8 +10,10 @@ import { getCurrentLocalDate } from "../utils/getCurrentLocalDate.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { mongoose } from "mongoose";
 import { Rider } from "../models/rider.model.js";
+import { generateRandom3DigitNumber } from "../utils/otpGenerate.js";
 
 // Create Driver Function
+
 export const createDriver = asyncHandler(async (req, res) => {
   const { phone } = req.body;
 
@@ -42,12 +44,39 @@ export const createDriver = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, null, "Driver already exists"));
     }
 
-    const driverData = { ...req.body, userId: existsUser._id };
+    // Generate a unique 3-digit `eto_id_num`
+    let eto_id_num;
+    let isUnique = false;
+    while (!isUnique) {
+      eto_id_num = generateRandom3DigitNumber();
+      const existingEtoCard = await ETOCard.findOne({ eto_id_num });
+      if (!existingEtoCard) {
+        isUnique = true;
+      }
+    }
+
+    // Set default coordinates if current location is not provided or contains null values
+    const defaultCoordinates = [0, 0];
+    const driverData = {
+      ...req.body,
+      userId: existsUser._id,
+      current_location: {
+        type: "Point",
+        coordinates: req.body.current_location?.coordinates?.every(
+          (coord) => coord != null
+        )
+          ? req.body.current_location.coordinates
+          : defaultCoordinates,
+      },
+    };
+
     const newDriver = new Driver(driverData);
     const savedDriver = await newDriver.save();
 
     const etoCardData = {
       driverId: savedDriver._id,
+      userId: existsUser._id,
+      eto_id_num: `ETO ${eto_id_num}`, // Use the unique 3-digit number generated above
       id_details: {
         name: existsUser.name,
         email: existsUser.email,
@@ -61,7 +90,6 @@ export const createDriver = asyncHandler(async (req, res) => {
         driver_photo: req.body.driver_photo,
         car_photo: req.body.car_photo,
       },
-      eto_id_num: req.body.eto_id_num,
       helpLine_num: req.body.helpLine_num,
     };
 
@@ -111,7 +139,7 @@ export const getDriverById = asyncHandler(async (req, res) => {
   }
 
   try {
-    const driver = await Driver.findById(id);
+    const driver = await Driver.findOne({ userId: id });
     if (!driver) {
       return res
         .status(404)
