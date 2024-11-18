@@ -12,8 +12,9 @@ const app = express();
 const server = http.createServer(app);
 
 // Initialize Socket.IO by passing the server
-const io = setupSocketIO(server);
+const io = setupSocketIO(server); // Use the same server for Socket.IO
 
+// Middleware configuration
 app.use(
   cors({
     origin: "http://192.168.31.227:8081", // Set your React app origin
@@ -21,8 +22,6 @@ app.use(
   })
 );
 
-// Other middleware and route setup
-// app.use(rateLimitMiddleware);
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
@@ -38,17 +37,17 @@ import paymentRouter from "./routes/payment.routes.js";
 app.use("/eto/api/v1/auth", userRouter);
 app.use("/eto/api/v1/driver", driverRouter);
 app.use("/eto/api/v1/rider", riderRouter);
-app.use("/eto/api/v1/rides", createRideDetailsRouter(io));
+app.use("/eto/api/v1/rides", createRideDetailsRouter(io)); // Pass io to rideDetailsRouter
 app.use("/eto/api/v1/eto", etoRouter);
 app.use("/", paymentRouter);
 
 // Home route
 app.get("/", (req, res) => {
-  res.send("Welcome To1 EASY Toto Oerator (TRIAL) API!");
+  res.send("Welcome To EASY Toto Operator (TRIAL) API!");
 });
 
 app.get("/test", (req, res) => {
-  res.send("Welcome to00 EASY (TRIAL) API!");
+  res.send("Welcome to EASY (TRIAL) API!");
 });
 
 // Error handling middleware
@@ -56,9 +55,3 @@ app.use(errorHandler);
 
 // Export server and app
 export { app, server };
-
-// Start the server
-const PORT = 8080;
-server.listen(PORT, () => {
-  console.log(`Socket is running on 192.168.31.227:${PORT}`);
-});
