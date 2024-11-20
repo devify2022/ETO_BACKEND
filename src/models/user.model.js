@@ -10,7 +10,6 @@ const usersSchema = new Schema(
     },
     isVerified: {
       type: Boolean,
-      // required: [true, 'Verification status is required'],
       default: false,
     },
     isDriver: {
@@ -19,7 +18,6 @@ const usersSchema = new Schema(
     },
     isAdmin: {
       type: Boolean,
-      // required: [true, 'Admin status is required'],
       default: false,
     },
     refreshToken: {
@@ -34,6 +32,7 @@ usersSchema.methods.generateAccessToken = function () {
     {
       _id: this._id,
       isDriver: this.isDriver,
+      isAdmin: this.isAdmin, // Include isAdmin in the token payload
     },
     process.env.ACCESS_TOKEN_SECRET,
     {
@@ -47,6 +46,7 @@ usersSchema.methods.generateRefreshToken = function () {
     {
       _id: this._id,
       isDriver: this.isDriver,
+      isAdmin: this.isAdmin, // Include isAdmin in the token payload
     },
     process.env.REFRESH_TOKEN_SECRET,
     {

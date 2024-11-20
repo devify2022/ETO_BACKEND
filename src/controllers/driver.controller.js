@@ -7,13 +7,12 @@ import { WithdrawalLogs } from "../models/withdrawlLogs.model.js";
 import { ApiError } from "../utils/apiError.js";
 import { getCurrTime } from "../utils/getCurrTime.js";
 import { getCurrentLocalDate } from "../utils/getCurrentLocalDate.js";
-import { ApiResponse } from "../utils/apiResponse.js";
 import { mongoose } from "mongoose";
 import { Rider } from "../models/rider.model.js";
 import { generateRandom3DigitNumber } from "../utils/otpGenerate.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 
 // Create Driver Function
-
 export const createDriver = asyncHandler(async (req, res) => {
   const { phone } = req.body;
 
@@ -139,7 +138,7 @@ export const getDriverById = asyncHandler(async (req, res) => {
   }
 
   try {
-    const driver = await Driver.findOne({ userId: id });
+    const driver = await Driver.findById(id);
     if (!driver) {
       return res
         .status(404)
@@ -157,6 +156,52 @@ export const getDriverById = asyncHandler(async (req, res) => {
   }
 });
 
+// Get Driver registered time by id
+export const getDriverRegistrationTimeById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Driver ID is required"));
+  }
+
+  try {
+    // Find the driver by userId
+    const driver = await Driver.findOne({ userId: id }).select(
+      "createdAt name"
+    );
+
+    if (!driver) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Driver not found"));
+    }
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          name: driver.name,
+          registrationTime: driver.createdAt, // Use createdAt field
+        },
+        "Driver registration time retrieved successfully"
+      )
+    );
+  } catch (error) {
+    console.error("Error retrieving driver registration time:", error.message);
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(
+          500,
+          null,
+          "Failed to retrieve driver registration time"
+        )
+      );
+  }
+});
+
 // Get Driver Ride by ID Function
 export const getDriverRideById = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -168,13 +213,23 @@ export const getDriverRideById = asyncHandler(async (req, res) => {
   }
 
   try {
-    const rides = await RideDetails.find({ driverId: id });
-    if (!rides || rides.length === 0) {
+    // First, find the driver by ID in the Driver collection
+    const driver = await Driver.findById(id);
+    if (!driver) {
       return res
         .status(404)
         .json(new ApiResponse(404, null, "Driver not found"));
     }
 
+    // Then, find rides from the RideDetails collection where the driverId matches
+    const rides = await RideDetails.find({ driverId: driver._id });
+    if (!rides || rides.length === 0) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "No rides found for this driver"));
+    }
+
+    // Return the rides associated with the driver
     return res
       .status(200)
       .json(new ApiResponse(200, rides, "Driver rides retrieved successfully"));
@@ -469,6 +524,43 @@ export const deleteDriver = asyncHandler(async (req, res) => {
   }
 });
 
+// Get Today's Rides
+export const getTodaysRides = asyncHandler(async (req, res) => {
+  const { driverId } = req.body; // Driver ID passed in request body
+
+  try {
+    // Get the current date and set the start and end of the day
+    const today = new Date();
+    const startOfDay = new Date(today.setHours(0, 0, 0, 0)); // 00:00:00 of today
+    const endOfDay = new Date(today.setHours(23, 59, 59, 999)); // 23:59:59 of today
+
+    // Query to find today's rides for the given driver
+    const rides = await RideDetails.find({
+      driverId: new mongoose.Types.ObjectId(driverId),
+      ride_end_time: { $gte: startOfDay, $lte: endOfDay }, // Filter by today's date
+    })
+      .populate("driverId", "name phone") // Optionally populate driver details if needed
+      .exec();
+
+    if (rides.length === 0) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "No rides found for today."));
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, { rides }, "Today's rides fetched successfully.")
+      );
+  } catch (error) {
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to fetch today's rides."));
+  }
+});
+
+// Get Total Earings by date
 export const getTotalEarningByDate = asyncHandler(async (req, res) => {
   const { driverId, startDate, endDate } = req.body;
 
@@ -522,6 +614,7 @@ export const getTotalEarningByDate = asyncHandler(async (req, res) => {
   }
 });
 
+// Get Recent rides
 export const getRecentRides = asyncHandler(async (req, res) => {
   const { id } = req.params;
   try {
@@ -694,3 +787,91 @@ export const createWithdrawalLogs = asyncHandler(async (req, res) => {
     });
   }
 });
+
+// Get Top Drivers Based on Number of Rides
+export const getTopDrivers = asyncHandler(async (req, res) => {
+  try {
+    // Aggregate the rides to get the number of rides per driver
+    const topDrivers = await RideDetails.aggregate([
+      {
+        $group: {
+          _id: "$driverId", // Group by driverId
+          rideCount: { $sum: 1 }, // Count the number of rides for each driver
+        },
+      },
+      {
+        $lookup: {
+          from: "drivers", // Look up the driver details from the Driver collection
+          localField: "_id",
+          foreignField: "_id",
+          as: "driverDetails",
+        },
+      },
+      {
+        $unwind: "$driverDetails", // Unwind the driver details to merge with the ride data
+      },
+      {
+        $sort: { rideCount: -1 }, // Sort by ride count in descending order
+      },
+      {
+        $limit: 10, // Limit to top 10 drivers
+      },
+      {
+        $project: {
+          driverId: "$_id",
+          name: "$driverDetails.name", // Assuming the driver details contain a name field
+          rideCount: 1,
+          photo: "$driverDetails.photo", // Assuming driver photo exists in the driver document
+        },
+      },
+    ]);
+
+    if (topDrivers.length === 0) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "No drivers found"));
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, topDrivers, "Top drivers fetched successfully")
+      );
+  } catch (error) {
+    console.error("Error fetching top drivers:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to fetch top drivers"));
+  }
+});
+
+// Get all drivers with isApproved = false
+export const getUnapprovedDrivers = asyncHandler(async (req, res) => {
+  try {
+    // Find drivers where isApproved is false
+    const unapprovedDrivers = await Driver.find({ isApproved: false });
+
+    if (unapprovedDrivers.length === 0) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "No unapproved drivers found"));
+    }
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          drivers: unapprovedDrivers,
+          count: unapprovedDrivers.length, // Send the length of unapproved drivers
+        },
+        "Unapproved drivers fetched successfully"
+      )
+    );
+  } catch (error) {
+    console.error("Error fetching unapproved drivers:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to fetch unapproved drivers"));
+  }
+});
+

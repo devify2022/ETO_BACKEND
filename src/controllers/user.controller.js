@@ -1,6 +1,5 @@
 import { ObjectId } from "bson";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiResponse } from "../utils/apiResponse.js";
 import { User } from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import { Rider } from "../models/rider.model.js";
@@ -9,6 +8,8 @@ import {
   sendOtpViaMessageCentral,
   validateOtpViaMessageCentral,
 } from "../utils/sentOtp.js";
+import { Admin } from "../models/admin.model.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 
 // Generate Access and Refresh Tokens
 const generateAccessAndRefreshToken = async (userId) => {
@@ -37,7 +38,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 
 // Login User Function
 export const loginAndSendOtp = asyncHandler(async (req, res) => {
-  const { phone, isDriver } = req.body;
+  const { phone, isDriver, isAdmin } = req.body;
 
   // Validate input
   if (!phone) {
@@ -51,10 +52,13 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
   let otpResponse = null;
   let otpCredentials = null;
 
-  // Determine role and find existing user details (Driver or Passenger)
+  // Determine role and find existing user details (Driver, Passenger, or Admin)
   if (isDriver) {
     userDetails = await Driver.findOne({ phone });
     role = "driver";
+  } else if (isAdmin) {
+    userDetails = await Admin.findOne({ phone });
+    role = "admin";
   } else {
     userDetails = await Rider.findOne({ phone });
     role = "passenger";
@@ -136,14 +140,14 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
   } else {
     // Handle new user registration
     if (user) {
-      if (user.isDriver !== isDriver) {
+      if (user.isDriver !== isDriver || user.isAdmin !== isAdmin) {
         return res
           .status(409)
           .json(
             new ApiResponse(
               409,
               null,
-              `This number is already used as a ${user.isDriver ? "driver" : "passenger"}.`
+              `This number is already used as a ${user.isDriver ? "driver" : user.isAdmin ? "admin" : "passenger"}.`
             )
           );
       }
@@ -156,7 +160,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
         phone,
         isVerified: false,
         isDriver,
-        isAdmin: false,
+        isAdmin, // Set isAdmin flag based on the request
       });
 
       await user.save();
@@ -298,11 +302,36 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       user._id
     );
 
+    // If the user is an admin
+    if (user.isAdmin) {
+      const adminDetails = await Admin.findOne({ phone });
+
+      const msg = {
+        role: "admin",
+        isVerified: user.isVerified,
+        isNewAdmin: !adminDetails, // New admin if no details found
+        phone: user.phone,
+        accessToken,
+        refreshToken,
+        userDetails: adminDetails || {
+          userId: user._id,
+          phone: user.phone,
+          isVerified: user.isVerified,
+          isDriver: user.isDriver,
+          isAdmin: user.isAdmin,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        }, // Send admin details if available
+      };
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, msg, "OTP verified for admin"));
+    }
+
     // If the user is a driver
     if (user.isDriver) {
       const driverDetails = await Driver.findOne({ phone });
-      // console.log(driverDetails);
-
       const msg = {
         role: "driver",
         isVerified: user.isVerified,
@@ -420,7 +449,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
 
 // Resend OTP Function
 export const resendOtp = asyncHandler(async (req, res) => {
-  const { phone, isDriver } = req.body;
+  const { phone } = req.body;
 
   if (!phone) {
     return res
@@ -438,14 +467,17 @@ export const resendOtp = asyncHandler(async (req, res) => {
   user.isVerified = false;
   await user.save();
 
-  // Send OTP via Message Central
   try {
+    // Attempt to send OTP via Message Central
     const otpResponse = await sendOtpViaMessageCentral(phone);
-    const otpCredentials = JSON.parse(otpResponse);
+    console.log("OTP Response:", otpResponse); // Log the response to debug
+
+    // Since otpResponse is already an object, no need to parse it
+    const otpCredentials = otpResponse;
 
     // Prepare response data
     const data = {
-      role: user.isDriver ? "driver" : "passenger",
+      role: user.isDriver ? "driver" : user.isAdmin ? "admin" : "passenger",
       phone: user.phone,
       otpdata: otpCredentials.data,
     };

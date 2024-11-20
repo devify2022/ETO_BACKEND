@@ -3,6 +3,15 @@ import mongoose, { Schema } from "mongoose";
 // Define the schema for RideDetails
 const rideDetailsSchema = new Schema(
   {
+    adminId: {
+      type: Schema.Types.ObjectId,
+      ref: "Admin",
+      required: true,
+      default: async () => {
+        const admin = await mongoose.model("Admin").findOne(); // Fetch the first admin record
+        return admin ? admin._id : null; // Return the admin's _id if found
+      },
+    },
     driverId: {
       type: Schema.Types.ObjectId,
       ref: "Driver",

@@ -33,21 +33,22 @@ const driverSchema = new Schema(
       type: String, // To store driver's current socketId
       default: null,
     },
-    online_wallet: {
+    due_wallet: {
       type: Number,
       default: 0,
     },
     cash_wallet: {
       type: Number,
-      default: 0,
+      default: 0, // Amount to be paid in cash
     },
-    due_wallet: {
+    online_wallet: {
       type: Number,
-      default: 0,
+      default: 0, // Amount to be paid online
     },
     total_earning: {
       type: Number,
       default: 0,
+      min: [0, "Total earnings cannot be negative"],
     },
     name: {
       type: String,
@@ -98,10 +99,18 @@ const driverSchema = new Schema(
       required: [true, "License number is required"],
       trim: true,
     },
-    ride_ids: [
+    ride_details: [
       {
-        type: Schema.Types.ObjectId,
-        ref: "RideDetails",
+        rideDetailsId: {
+          type: Schema.Types.ObjectId,
+          ref: "RideDetails",
+          required: true,
+        },
+        paymentMode: {
+          type: String,
+          enum: ["cash", "online"],
+          required: true,
+        },
       },
     ],
     aadhar_front_photo: {

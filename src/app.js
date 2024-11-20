@@ -28,16 +28,20 @@ app.use(express.static("public"));
 
 // Import and use routes
 import userRouter from "./routes/user.routes.js";
+import adminRouter from "./routes/admin.routes.js";
 import driverRouter from "./routes/driver.routes.js";
 import riderRouter from "./routes/rider.routes.js";
 import createRideDetailsRouter from "./routes/rideDetails.routes.js";
+import dueRequestRouter from "./routes/dueRequest.routes.js";
 import etoRouter from "./routes/eto.routes.js";
 import paymentRouter from "./routes/payment.routes.js";
 
 app.use("/eto/api/v1/auth", userRouter);
+app.use("/eto/api/v1/admin", adminRouter);
 app.use("/eto/api/v1/driver", driverRouter);
 app.use("/eto/api/v1/rider", riderRouter);
-app.use("/eto/api/v1/rides", createRideDetailsRouter(io)); // Pass io to rideDetailsRouter
+app.use("/eto/api/v1/rides", createRideDetailsRouter(io));
+app.use("/eto/api/v1/dueRequest", dueRequestRouter);
 app.use("/eto/api/v1/eto", etoRouter);
 app.use("/", paymentRouter);
 

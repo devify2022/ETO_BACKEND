@@ -4,6 +4,10 @@ import {
   // acceptRide2,
   cancelRide,
   findAvailableDrivers,
+  getAllActiveRides,
+  getTotalDriversInCurrentRides,
+  getTotalEarningsOfEndedRides,
+  getTotalRides,
   rejectRide,
   updatePaymentMode,
   // findAvailableDrivers2,
@@ -14,11 +18,11 @@ import {
 const createRouterWithSocket = (io) => {
   const router = Router();
 
-  router.route("/findDrivers").post(findAvailableDrivers); // Using it directly without `io`
-
-  // router
-  //   .route("/acceptRide")
-  //   .post((req, res, next) => acceptRide(io)(req, res, next));
+  router.route("/findDrivers").post(findAvailableDrivers);
+  router.route("/activeRides").get(getAllActiveRides);
+  router.route("/totalEarnings").get(getTotalEarningsOfEndedRides);
+  router.route("/all-driver/currentride").get(getTotalDriversInCurrentRides);
+  router.route("/getTotalRides").get(getTotalRides);
 
   router
     .route("/acceptRide")
@@ -27,12 +31,6 @@ const createRouterWithSocket = (io) => {
   router
     .route("/rejectRide")
     .post((req, res, next) => rejectRide(io)(req, res, next));
-
-  // router
-  //   .route("/findDrivers")
-  //   .post((req, res, next) => findAvailableDrivers(io)(req, res, next));
-
-  // FIX: No need to pass `io` to `findAvailableDrivers`
 
   router
     .route("/verify-pickup-otp")

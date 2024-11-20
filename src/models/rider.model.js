@@ -26,10 +26,18 @@ const riderSchema = new Schema(
       type: Number,
       default: 0,
     },
-    ride_ids: [
+    ride_details: [
       {
-        type: Schema.Types.ObjectId,
-        ref: "RideDetails",
+        rideDetailsId: {
+          type: Schema.Types.ObjectId,
+          ref: "RideDetails",
+          required: true,
+        },
+        paymentMode: {
+          type: String,
+          enum: ["cash", "online"],
+          required: true,
+        },
       },
     ],
     current_location: {

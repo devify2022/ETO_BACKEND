@@ -1,12 +1,13 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Rider } from "../models/rider.model.js";
 import { Driver } from "../models/driver.model.js";
-import { ApiResponse } from "../utils/apiResponse.js";
 import generateOtp from "../utils/otpGenerate.js";
 import { RideDetails } from "../models/rideDetails.model.js";
 import mongoose from "mongoose";
 import geolib from "geolib";
 import dotenv from "dotenv";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { Admin } from "../models/admin.model.js";
 
 dotenv.config({
   path: "./env",
@@ -140,7 +141,6 @@ export const findAvailableDrivers = asyncHandler(async (req, res) => {
       .json(new ApiResponse(500, null, "Failed to find available drivers"));
   }
 });
-
 
 // Accept Ride request new api
 export const acceptRide = (io) =>
@@ -458,7 +458,18 @@ export const verifyDropOtp = (io) =>
       }
 
       const rider = await Rider.findById(ride.riderId);
+      if (!rider) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, null, "Rider not found"));
+      }
+
       const driver = await Driver.findById(ride.driverId);
+      if (!driver) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, null, "Driver not found"));
+      }
 
       // Verify the drop OTP
       if (ride.drop_otp !== dropOtp) {
@@ -470,13 +481,23 @@ export const verifyDropOtp = (io) =>
       // Update the rider's status and ride details
       rider.is_on_ride = false;
       rider.current_ride_id = null;
-      rider.ride_ids.push(new mongoose.Types.ObjectId(rideId));
+
+      // Add ride details to the rider's ride_details array
+      // rider.ride_details.push({
+      //   rideDetailsId: new mongoose.Types.ObjectId(rideId),
+      //   paymentMode: ride.payment_mode, // Ensure payment mode is added
+      // });
       await rider.save();
 
       // Update the driver's status and ride details
       driver.is_on_ride = false;
       driver.current_ride_id = null;
-      driver.ride_ids.push(new mongoose.Types.ObjectId(rideId));
+
+      // Add ride details to the driver's ride_details array
+      // driver.ride_details.push({
+      //   rideDetailsId: new mongoose.Types.ObjectId(rideId),
+      //   paymentMode: ride.payment_mode, // Ensure payment mode is added
+      // });
       await driver.save();
 
       // Update the ride status
@@ -492,7 +513,7 @@ export const verifyDropOtp = (io) =>
 
       // Emit ride completion updates to both the rider and driver
       if (rider.socketId) {
-        console.log(`emiting ride completed data to rider, ${rider.socketId}`);
+        console.log(`Emitting ride completed data to rider, ${rider.socketId}`);
         io.to(rider.socketId).emit("rideVerifyRider", {
           message: "Ride completed and OTP verified",
           isAccept: false,
@@ -503,7 +524,7 @@ export const verifyDropOtp = (io) =>
 
       if (driver.socketId) {
         console.log(
-          `emiting ride completed data to driver, ${driver.socketId}`
+          `Emitting ride completed data to driver, ${driver.socketId}`
         );
         io.to(driver.socketId).emit("rideCompletedToDriver", {
           message: "Ride completed and OTP verified",
@@ -631,7 +652,7 @@ export const updatePaymentMode = (io) =>
       }
 
       // Get the driverId and riderId from the ride details
-      const { driverId, riderId } = ride;
+      const { driverId, riderId, adminId } = ride;
 
       // Find the driver by driverId
       const driver = await Driver.findById(driverId);
@@ -641,7 +662,7 @@ export const updatePaymentMode = (io) =>
           .json(new ApiResponse(404, null, "Driver not found"));
       }
 
-      // Find the rider by riderId (Optional for validation or other logic)
+      // Find the rider by riderId
       const rider = await Rider.findById(riderId);
       if (!rider) {
         return res
@@ -649,26 +670,72 @@ export const updatePaymentMode = (io) =>
           .json(new ApiResponse(404, null, "Rider not found"));
       }
 
+      // Find the admin related to the driver (if any)
+      const admin = await Admin.findById(adminId);
+      if (!admin) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, null, "Admin not found"));
+      }
+
       // Update the payment mode in the ride details
       ride.payment_mode = paymentMode;
       await ride.save();
 
-      // Update the driver's wallet based on payment mode
+      // Update the driver's wallet and ride details
       if (paymentMode === "cash") {
-        // Add total amount to the driver's cash wallet
-        driver.cash_wallet += ride.total_amount;
+        driver.cash_wallet += ride.total_amount; // Add total amount to the driver's cash wallet
       } else if (paymentMode === "online") {
-        // Add total amount to the driver's online wallet
-        driver.online_wallet += ride.total_amount;
+        driver.online_wallet += ride.total_amount; // Add total amount to the driver's online wallet
       }
 
-      // Update total earnings of the driver
-      driver.total_earning += ride.driver_profit;
+      // Add driver_profit to driver's due wallet
+      driver.due_wallet += ride.driver_profit;
 
-      // Save the updated driver details
+      // Update the driver's ride details with the new payment mode
+      const driverRideIndex = driver.ride_details.findIndex(
+        (detail) => detail.rideDetailsId.toString() === rideId
+      );
+
+      if (driverRideIndex !== -1) {
+        driver.ride_details[driverRideIndex].paymentMode = paymentMode;
+      } else {
+        driver.ride_details.push({
+          rideDetailsId: new mongoose.Types.ObjectId(rideId),
+          paymentMode,
+        });
+      }
+
       await driver.save();
 
-      // Emit updates to the rider and driver (optional)
+      // Update the rider's ride details
+      const riderRideIndex = rider.ride_details.findIndex(
+        (detail) => detail.rideDetailsId.toString() === rideId
+      );
+
+      if (riderRideIndex !== -1) {
+        rider.ride_details[riderRideIndex].paymentMode = paymentMode;
+      } else {
+        rider.ride_details.push({
+          rideDetailsId: new mongoose.Types.ObjectId(rideId),
+          paymentMode,
+        });
+      }
+
+      await rider.save();
+
+      // If admin exists, update their due payment details
+      if (admin) {
+        // Add admin_profit to admin's due payment
+        admin.due_wallet += ride.driver_profit;
+        admin.due_payment_details.push({
+          driverId: driverId,
+          due_payment: ride.admin_profit,
+        });
+        await admin.save();
+      }
+
+      // Emit updates to the rider and driver
       if (rider.socketId) {
         io.to(rider.socketId).emit("paymentModeUpdated", {
           message: "Payment mode updated successfully",
@@ -695,3 +762,163 @@ export const updatePaymentMode = (io) =>
         .json(new ApiResponse(500, null, "Failed to update payment mode"));
     }
   });
+
+// API to get all active rides
+export const getAllActiveRides = asyncHandler(async (req, res) => {
+  try {
+    // Fetch all rides where isOn is true
+    const activeRides = await RideDetails.find({ isOn: true });
+
+    // If no active rides are found
+    if (activeRides.length === 0) {
+      return res.status(404).json({
+        message: "No active rides found.",
+      });
+    }
+
+    // Return the list of active rides
+    return res.status(200).json({
+      message: "Active rides retrieved successfully.",
+      data: activeRides,
+    });
+  } catch (error) {
+    console.error("Error fetching active rides:", error.message);
+    return res.status(500).json({
+      message: "Failed to retrieve active rides.",
+    });
+  }
+});
+
+// API to get total earnings of all rides where isRide_ended is true
+export const getTotalEarningsOfEndedRides = asyncHandler(async (req, res) => {
+  try {
+    // Aggregate the rides where isRide_ended is true and sum the total_amount
+    const result = await RideDetails.aggregate([
+      {
+        $match: {
+          isRide_ended: true, // Only include rides where isRide_ended is true
+        },
+      },
+      {
+        $group: {
+          _id: null, // Grouping all the documents together
+          totalEarnings: { $sum: "$total_amount" }, // Sum up the total_amount of each ride
+        },
+      },
+    ]);
+
+    // If no ended rides found, return a message indicating that
+    if (result.length === 0) {
+      return res.status(404).json({
+        message: "No ended rides found.",
+        totalEarnings: 0,
+      });
+    }
+
+    // Return the total earnings from all ended rides
+    return res.status(200).json({
+      message: "Total earnings of ended rides fetched successfully.",
+      totalEarnings: result[0].totalEarnings, // Extract the total earnings from the result
+    });
+  } catch (error) {
+    console.error(
+      "Error fetching total earnings of ended rides:",
+      error.message
+    );
+    return res.status(500).json({
+      message: "Failed to fetch total earnings of ended rides.",
+    });
+  }
+});
+
+// Get Total Drivers with Details in Current Rides
+export const getTotalDriversInCurrentRides = asyncHandler(
+  async (req, res) => {
+    try {
+      // Find all active rides and populate driver details
+      const activeRides = await RideDetails.find({ isOn: true })
+        .populate("driverId", "name phone photo") // Populate driver details
+        .select("driverId pickup_location"); // Include only required fields
+
+      if (!activeRides || activeRides.length === 0) {
+        return res
+          .status(200)
+          .json(new ApiResponse(200, [], "No active rides found", true));
+      }
+
+      // Filter rides with valid driver details and map the data
+      const driverDetails = activeRides
+        .filter((ride) => ride.driverId) // Ensure the driver exists
+        .map((ride) => ({
+          driverId: ride.driverId._id,
+          name: ride.driverId.name,
+          phone: ride.driverId.phone,
+          photo: ride.driverId.photo,
+          currentLocation: ride.pickup_location, // Include pickup location
+        }));
+
+      if (driverDetails.length === 0) {
+        return res
+          .status(200)
+          .json(
+            new ApiResponse(
+              200,
+              [],
+              "No valid drivers found for active rides",
+              true
+            )
+          );
+      }
+
+      // Return the driver details
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            driverDetails,
+            "Driver details in current rides fetched successfully",
+            true
+          )
+        );
+    } catch (error) {
+      console.error(
+        "Error fetching driver details in current rides:",
+        error.message
+      );
+      return res
+        .status(500)
+        .json(
+          new ApiResponse(
+            500,
+            null,
+            "Failed to fetch driver details in current rides",
+            false
+          )
+        );
+    }
+  }
+);
+
+// API to fetch the total number of rides
+export const getTotalRides = asyncHandler(async (req, res) => {
+  try {
+    // Fetch all rides
+    const rides = await RideDetails.find();
+
+    // Count the total number of rides
+    const totalRides = rides.length;
+
+    // Return the total number of rides and the rides data
+    return res.status(200).json({
+      message: "Total rides fetched successfully.",
+      totalRides,
+      rides,
+    });
+  } catch (error) {
+    console.error("Error fetching total rides:", error.message);
+    return res.status(500).json({
+      message: "Failed to fetch total rides.",
+    });
+  }
+});
