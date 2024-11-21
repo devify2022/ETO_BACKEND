@@ -19,7 +19,6 @@ import {
   getDriverRegistrationTimeById,
   getTopDrivers,
   getUnapprovedDrivers,
-  updateDriverApprovalStatus,
 } from "../controllers/driver.controller.js";
 import { getETOCardById } from "../controllers/etoController.js";
 
