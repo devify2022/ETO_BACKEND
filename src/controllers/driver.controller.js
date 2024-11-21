@@ -326,8 +326,10 @@ export const getRideHistory = asyncHandler(async (req, res) => {
         .json(new ApiResponse(404, null, "Driver not found"));
     }
 
-    // If there are no ride IDs, return early
-    if (!driver.ride_ids || driver.ride_ids.length === 0) {
+    // Extract ride IDs from ride_details array
+    const rideIds = driver.ride_details.map((ride) => ride.rideDetailsId);
+
+    if (!rideIds || rideIds.length === 0) {
       return res
         .status(404)
         .json(
@@ -335,11 +337,11 @@ export const getRideHistory = asyncHandler(async (req, res) => {
         );
     }
 
-    // Fetch all rides associated with this driver
-    const rides = await RideDetails.find({ _id: { $in: driver.ride_ids } });
+    // Fetch all rides associated with these IDs
+    const rides = await RideDetails.find({ _id: { $in: rideIds } });
 
     // Identify missing ride IDs
-    const missingRides = driver.ride_ids.filter(
+    const missingRides = rideIds.filter(
       (rideId) => !rides.some((ride) => ride._id.equals(rideId))
     );
 
@@ -350,7 +352,6 @@ export const getRideHistory = asyncHandler(async (req, res) => {
       );
     }
 
-    // Return the ride history, with a warning if any rides are missing
     return res
       .status(200)
       .json(
