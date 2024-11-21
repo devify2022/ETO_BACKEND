@@ -17,7 +17,7 @@ const io = setupSocketIO(server); // Use the same server for Socket.IO
 // Middleware configuration
 app.use(
   cors({
-    origin: "http://192.168.31.227:8081", // Set your React app origin
+    origin: ["http://192.168.31.227:8081", "http://localhost:8081"], // Set your React app origin
     credentials: true,
   })
 );
