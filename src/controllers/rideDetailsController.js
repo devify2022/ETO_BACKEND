@@ -229,8 +229,16 @@ export const acceptRide = (io) =>
       const pickupOtp = generateOtp();
       const dropOtp = generateOtp();
 
+      const admin = await mongoose.model("Admin").findOne();
+      if (!admin) {
+        return res
+          .status(500)
+          .json(new ApiResponse(500, null, "Admin not found"));
+      }
+
       // Create new ride details
       const newRide = new RideDetails({
+        adminId: admin._id,
         driverId: driver._id,
         riderId: rider._id,
         pickup_location: {
@@ -769,22 +777,19 @@ export const getAllActiveRides = asyncHandler(async (req, res) => {
     // Fetch all rides where isOn is true
     const activeRides = await RideDetails.find({ isOn: true });
 
-    // If no active rides are found
-    if (activeRides.length === 0) {
-      return res.status(404).json({
-        message: "No active rides found.",
-      });
-    }
-
-    // Return the list of active rides
+    // Return the list of active rides or an empty array if none are found
     return res.status(200).json({
-      message: "Active rides retrieved successfully.",
-      data: activeRides,
+      message:
+        activeRides.length > 0
+          ? "Active rides retrieved successfully."
+          : "No active rides found.",
+      data: activeRides, // Will be an array, either with rides or empty
     });
   } catch (error) {
     console.error("Error fetching active rides:", error.message);
     return res.status(500).json({
       message: "Failed to retrieve active rides.",
+      data: [], // Return an empty array in case of an error
     });
   }
 });
@@ -832,73 +837,71 @@ export const getTotalEarningsOfEndedRides = asyncHandler(async (req, res) => {
 });
 
 // Get Total Drivers with Details in Current Rides
-export const getTotalDriversInCurrentRides = asyncHandler(
-  async (req, res) => {
-    try {
-      // Find all active rides and populate driver details
-      const activeRides = await RideDetails.find({ isOn: true })
-        .populate("driverId", "name phone photo") // Populate driver details
-        .select("driverId pickup_location"); // Include only required fields
+export const getTotalDriversInCurrentRides = asyncHandler(async (req, res) => {
+  try {
+    // Find all active rides and populate driver details
+    const activeRides = await RideDetails.find({ isOn: true })
+      .populate("driverId", "name phone photo") // Populate driver details
+      .select("driverId pickup_location"); // Include only required fields
 
-      if (!activeRides || activeRides.length === 0) {
-        return res
-          .status(200)
-          .json(new ApiResponse(200, [], "No active rides found", true));
-      }
+    if (!activeRides || activeRides.length === 0) {
+      return res
+        .status(200)
+        .json(new ApiResponse(200, [], "No active rides found", true));
+    }
 
-      // Filter rides with valid driver details and map the data
-      const driverDetails = activeRides
-        .filter((ride) => ride.driverId) // Ensure the driver exists
-        .map((ride) => ({
-          driverId: ride.driverId._id,
-          name: ride.driverId.name,
-          phone: ride.driverId.phone,
-          photo: ride.driverId.photo,
-          currentLocation: ride.pickup_location, // Include pickup location
-        }));
+    // Filter rides with valid driver details and map the data
+    const driverDetails = activeRides
+      .filter((ride) => ride.driverId) // Ensure the driver exists
+      .map((ride) => ({
+        driverId: ride.driverId._id,
+        name: ride.driverId.name,
+        phone: ride.driverId.phone,
+        photo: ride.driverId.photo,
+        currentLocation: ride.pickup_location, // Include pickup location
+      }));
 
-      if (driverDetails.length === 0) {
-        return res
-          .status(200)
-          .json(
-            new ApiResponse(
-              200,
-              [],
-              "No valid drivers found for active rides",
-              true
-            )
-          );
-      }
-
-      // Return the driver details
+    if (driverDetails.length === 0) {
       return res
         .status(200)
         .json(
           new ApiResponse(
             200,
-            driverDetails,
-            "Driver details in current rides fetched successfully",
+            [],
+            "No valid drivers found for active rides",
             true
           )
         );
-    } catch (error) {
-      console.error(
-        "Error fetching driver details in current rides:",
-        error.message
-      );
-      return res
-        .status(500)
-        .json(
-          new ApiResponse(
-            500,
-            null,
-            "Failed to fetch driver details in current rides",
-            false
-          )
-        );
     }
+
+    // Return the driver details
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          driverDetails,
+          "Driver details in current rides fetched successfully",
+          true
+        )
+      );
+  } catch (error) {
+    console.error(
+      "Error fetching driver details in current rides:",
+      error.message
+    );
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(
+          500,
+          null,
+          "Failed to fetch driver details in current rides",
+          false
+        )
+      );
   }
-);
+});
 
 // API to fetch the total number of rides
 export const getTotalRides = asyncHandler(async (req, res) => {

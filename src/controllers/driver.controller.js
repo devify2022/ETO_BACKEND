@@ -116,9 +116,16 @@ export const createDriver = asyncHandler(async (req, res) => {
 export const getAllDrivers = asyncHandler(async (req, res) => {
   try {
     const drivers = await Driver.find();
-    return res
-      .status(200)
-      .json(new ApiResponse(200, drivers, "Drivers retrieved successfully"));
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          drivers: drivers,
+          count: drivers.length, // Send the length of unapproved drivers
+        },
+        "Drivers retrieved successfully"
+      )
+    );
   } catch (error) {
     console.error("Error retrieving drivers:", error.message);
     return res
@@ -138,7 +145,7 @@ export const getDriverById = asyncHandler(async (req, res) => {
   }
 
   try {
-    const driver = await Driver.findById(id);
+    const driver = await Driver.findOne({ userId: id });
     if (!driver) {
       return res
         .status(404)
@@ -400,18 +407,26 @@ export const getAllActiveDrivers = asyncHandler(async (req, res) => {
     // Find all drivers where isActive is true
     const activeDrivers = await Driver.find({ isActive: true });
 
+    // Check if no active drivers are found
     if (!activeDrivers || activeDrivers.length === 0) {
       return res
         .status(404)
-        .json(new ApiResponse(404, null, "No active drivers found"));
+        .json(
+          new ApiResponse(
+            404,
+            { total: 0, drivers: [] },
+            "No active drivers found"
+          )
+        );
     }
 
+    // Return active drivers with their total count
     return res
       .status(200)
       .json(
         new ApiResponse(
           200,
-          activeDrivers,
+          { total: activeDrivers.length, drivers: activeDrivers },
           "Active drivers retrieved successfully"
         )
       );
@@ -875,3 +890,30 @@ export const getUnapprovedDrivers = asyncHandler(async (req, res) => {
   }
 });
 
+// Get total number of approved drivers
+export const getApprovedDrivers = asyncHandler(async (req, res) => {
+  try {
+    // Count drivers where isApproved is true
+    const approvedDriversCount = await Driver.approvedDriversCount({
+      isApproved: true,
+    });
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          drivers: approvedDriversCount,
+          count: approvedDriversCount.length, // Send the length of unapproved drivers
+        },
+        "Approved drivers count fetched successfully"
+      )
+    );
+  } catch (error) {
+    console.error("Error fetching approved drivers count:", error.message);
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(500, null, "Failed to fetch approved drivers count")
+      );
+  }
+});
