@@ -19,6 +19,7 @@ import {
   getDriverRegistrationTimeById,
   getTopDrivers,
   getUnapprovedDrivers,
+  approveDriverByDriverId,
 } from "../controllers/driver.controller.js";
 import { getETOCardById } from "../controllers/etoController.js";
 
@@ -32,6 +33,7 @@ router.route("/registered-time/:id").get(getDriverRegistrationTimeById);
 router.route("/eto-card/:id").get(getETOCardById);
 router.route("/activate/:id").put(activateDriver);
 router.route("/deactivate/:id").put(deactivateDriver);
+router.route("/approve").patch(approveDriverByDriverId);
 router.route("/delete/:id").delete(deleteDriver);
 router.route("/").get(getAllDrivers);
 router.route("/rideDetails/:id").get(getDriverRideById);

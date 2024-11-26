@@ -1,6 +1,8 @@
+import mongoose from "mongoose";
 import { Admin } from "../models/admin.model.js";
 import { Driver } from "../models/driver.model.js";
 import { DueRequest } from "../models/dueRequest.model.js";
+import { Khata } from "../models/khata.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -10,6 +12,13 @@ export const createDueRequest = asyncHandler(async (req, res) => {
     req.body;
 
   try {
+    const admin = await mongoose.model("Admin").findOne();
+    if (!admin) {
+      return res
+        .status(500)
+        .json(new ApiResponse(500, null, "Admin not found"));
+    }
+
     // Validate input data
     if (!requestedBy || !dueAmount || !paymentPhoto) {
       return res
@@ -20,6 +29,7 @@ export const createDueRequest = asyncHandler(async (req, res) => {
     // Create a new due request
     const newDueRequest = new DueRequest({
       requestedBy,
+      adminId: admin._id,
       dueAmount,
       status: "pending", // Default status is "pending"
       notes: notes || "", // If notes are not provided, default to an empty string
@@ -114,7 +124,7 @@ export const getDueRequestDetails = asyncHandler(async (req, res) => {
 // Update Due Request Status and Update Driver/Admin Wallets & Earnings
 export const updateDueRequestStatus = asyncHandler(async (req, res) => {
   const { dueRequestId } = req.params;
-  const { status, note } = req.body;
+  const { status, note, paymentMethod, paymentPhoto } = req.body;
 
   if (!status || !["approved", "rejected"].includes(status)) {
     return res.status(400).json({
@@ -132,44 +142,80 @@ export const updateDueRequestStatus = asyncHandler(async (req, res) => {
       });
     }
 
+    // Update the due wallet of the driver and admin
+    const driver = await Driver.findById(dueRequest.requestedBy);
+    const admin = await Admin.findById(dueRequest.adminId);
+
+    // console.log("Driver", driver);
+
+    if (!driver || !admin) {
+      return res.status(404).json({
+        message: "Driver or Admin not found.",
+      });
+    }
+
+    // Add payment details to Khata (this will be removed after approval)
+    const khata = await Khata.findOne({
+      driverId: driver._id,
+      adminId: admin._id,
+    });
+
+    if (!khata) {
+      return res.status(404).json({
+        message: "Khata record not found for this driver-admin pair.",
+      });
+    }
+
     // Handle "approved" status
     if (status === "approved") {
-      // Update the due wallet of the driver and admin
-      const driver = await Driver.findById(dueRequest.requestedBy);
-      const admin = await Admin.findById(dueRequest.resolvedBy);
-
-      if (!driver || !admin) {
-        return res.status(404).json({
-          message: "Driver or Admin not found.",
+      // Check if admin has sufficient balance in their due wallet
+      if (admin.due_wallet < dueRequest.dueAmount) {
+        return res.status(400).json({
+          message: "Admin does not have sufficient balance in due wallet.",
         });
       }
 
+      // Update driver and admin wallets
+      driver.total_earning += khata.driverdue; // Correctly increment total earnings
       driver.due_wallet -= dueRequest.dueAmount;
-      driver.total_earning += dueRequest.dueAmount;
 
       admin.due_wallet -= dueRequest.dueAmount;
       admin.total_earning += dueRequest.dueAmount;
 
-      // Delete the due payment from admin's due_payment_details (when approved)
-      const paymentIndex = admin.due_payment_details.findIndex(
+      khata.driverdue -= khata.driverdue;
+      khata.admindue -= khata.admindue;
+
+      // Remove the payment details from Khata's due_payment_details after approval
+      khata.due_payment_details = khata.due_payment_details.filter(
         (payment) =>
-          payment.driverId.toString() === driver._id.toString() &&
-          payment.due_payment === dueRequest.dueAmount
+          !(
+            payment.driverId.equals(driver._id)
+          )
       );
 
-      if (paymentIndex !== -1) {
-        admin.due_payment_details.splice(paymentIndex, 1); // Remove the due payment entry
-      }
+      console.log(
+        "Khata Details Before Update:",
+        JSON.stringify(khata.due_payment_details, null, 2)
+      );
+      console.log("Driver ID:", driver._id.toString());
+      console.log("Due Amount:", dueRequest.dueAmount);
 
-      // Save the updated driver and admin details
-      await driver.save();
-      await admin.save();
+      await khata
+        .save()
+        .then(() => {
+          console.log("Khata updated successfully");
+        })
+        .catch((err) => {
+          console.error("Error saving Khata:", err);
+        });
 
-      // Update the due request with status and resolved time
+      // Update the due request with status, resolved time, and payment details
       dueRequest.status = "approved";
       dueRequest.resolvedAt = new Date();
       dueRequest.paidAmount = dueRequest.dueAmount;
       dueRequest.paymentDate = new Date();
+      dueRequest.paymentMethod = paymentMethod || "cash"; // Default to "cash" if not provided
+      dueRequest.paymentPhoto = paymentPhoto;
     } else if (status === "rejected") {
       // Handle rejection status and add the rejection reason in the notes
       dueRequest.status = "rejected";
@@ -178,6 +224,10 @@ export const updateDueRequestStatus = asyncHandler(async (req, res) => {
 
     // Save the updated due request
     await dueRequest.save();
+
+    // Save the updated driver and admin details
+    await driver.save();
+    await admin.save();
 
     return res.status(200).json({
       message: "Due request status updated successfully.",

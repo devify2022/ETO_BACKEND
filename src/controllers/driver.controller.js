@@ -11,6 +11,7 @@ import { mongoose } from "mongoose";
 import { Rider } from "../models/rider.model.js";
 import { generateRandom3DigitNumber } from "../utils/otpGenerate.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { Khata } from "../models/khata.model.js";
 
 // Create Driver Function
 export const createDriver = asyncHandler(async (req, res) => {
@@ -811,7 +812,7 @@ export const getTopDrivers = asyncHandler(async (req, res) => {
     const topDrivers = await RideDetails.aggregate([
       {
         $group: {
-          _id: "$driverId", // Group by driverId
+          _id: "$driverId",
           rideCount: { $sum: 1 }, // Count the number of rides for each driver
         },
       },
@@ -845,7 +846,7 @@ export const getTopDrivers = asyncHandler(async (req, res) => {
     if (topDrivers.length === 0) {
       return res
         .status(404)
-        .json(new ApiResponse(404, null, "No drivers found"));
+        .json(new ApiResponse(404, [], "No drivers found"));
     }
 
     return res
@@ -857,7 +858,7 @@ export const getTopDrivers = asyncHandler(async (req, res) => {
     console.error("Error fetching top drivers:", error.message);
     return res
       .status(500)
-      .json(new ApiResponse(500, null, "Failed to fetch top drivers"));
+      .json(new ApiResponse(500, [], "Failed to fetch top drivers"));
   }
 });
 
@@ -915,6 +916,62 @@ export const getApprovedDrivers = asyncHandler(async (req, res) => {
       .status(500)
       .json(
         new ApiResponse(500, null, "Failed to fetch approved drivers count")
+      );
+  }
+});
+
+// Approve a driver by ID
+export const approveDriverByDriverId = asyncHandler(async (req, res) => {
+  const { driverId, adminId } = req.body;
+
+  if (!driverId || !adminId) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Driver ID and Admin ID are required"));
+  }
+
+  try {
+    // Approve the driver
+    const updatedDriver = await Driver.findByIdAndUpdate(
+      driverId,
+      { isApproved: true },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedDriver) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Driver not found"));
+    }
+
+    // Check if Khata entry already exists
+    const existingKhata = await Khata.findOne({ driverId });
+
+    if (!existingKhata) {
+      // Create Khata entry for the approved driver
+      await Khata.create({
+        driverId,
+        adminId,
+        driverdue: 0,
+        admindue: 0,
+      });
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { driver: updatedDriver },
+          "Driver approved successfully and Khata entry created"
+        )
+      );
+  } catch (error) {
+    console.error("Error approving driver or creating Khata:", error.message);
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(500, null, "Failed to approve driver or create Khata")
       );
   }
 });

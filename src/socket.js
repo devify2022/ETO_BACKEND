@@ -31,7 +31,7 @@ export const setupSocketIO = (server) => {
           return socket.emit("error", { message: "Driver not found" });
         }
 
-        console.log(`Emitting location to driver socket: ${driver.socketId}`);
+        // console.log(`Emitting location to driver socket: ${driver.socketId}`);
         io.to(driver.socketId).emit("driverLocation", {
           driverId,
           location: { lat, lng },
@@ -141,7 +141,7 @@ export const setupSocketIO = (server) => {
         // Fetch driver and check if they are available to accept the ride
         const driver = await Driver.findById(driverId);
         if (driver && driver.isActive && !driver.is_on_ride) {
-          console.log("Emiting send request", driver.socketId);
+          // console.log("Emiting send request", driver.socketId);
           io.to(driver.socketId).emit("rideRequest", {
             riderId,
             pickUpLocation,
@@ -199,7 +199,7 @@ export const setupSocketIO = (server) => {
 
     // Accept Ride Event
     socket.on("acceptRide", async (data) => {
-      console.log(data);
+      // console.log(data);
       const { rideId, riderId, driverId } = data;
       if (!rideId || !riderId || !driverId) {
         return socket.emit("error", {
@@ -215,7 +215,7 @@ export const setupSocketIO = (server) => {
         );
 
         const rider = await Rider.findById(riderId);
-        console.log("Emiting accept status to rider", rider.socketId);
+        // console.log("Emiting accept status to rider", rider.socketId);
         io.to(rider.socketId).emit("rideStatus", {
           isBooked: true,
           message: "Booking request accepted. Ride successfully booked.",
@@ -228,7 +228,7 @@ export const setupSocketIO = (server) => {
 
     // Emit driver location to rider after ride acceptance
     socket.on("driverLocationUpdateAfterAccept", async (data) => {
-      console.log("Received data:", data);
+      // console.log("Received data:", data);
 
       const {
         driverLocation,
@@ -243,8 +243,8 @@ export const setupSocketIO = (server) => {
         return;
       }
 
-      console.log("Pickup Location:", pickupLocation);
-      console.log("Drop Location:", dropLocation);
+      // console.log("Pickup Location:", pickupLocation);
+      // console.log("Drop Location:", dropLocation);
 
       if (riderId) {
         try {

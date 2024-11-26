@@ -49,24 +49,6 @@ const adminSchema = new Schema(
         message: (props) => `${props.value} is not a valid phone number!`,
       },
     },
-    due_payment_details: [
-      {
-        driverId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Driver",
-          required: [true, "Driver ID is required"],
-        },
-        due_payment: {
-          type: Number,
-          default: 0,
-          required: [true, "Due payment amount is required"],
-        },
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
   },
   {
     timestamps: true, // Adds createdAt and updatedAt timestamps

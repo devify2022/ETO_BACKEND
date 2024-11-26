@@ -8,6 +8,7 @@ import geolib from "geolib";
 import dotenv from "dotenv";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Admin } from "../models/admin.model.js";
+import { Khata } from "../models/khata.model.js";
 
 dotenv.config({
   path: "./env",
@@ -100,11 +101,13 @@ export const findAvailableDrivers = asyncHandler(async (req, res) => {
         const totalDistance = driverDistanceToPickup + totalKmPickupToDrop;
 
         // Calculate total price based on both segments
-        const totalPrice = baseFare + totalDistance * perKmCharge;
+        const totalPrice = Math.ceil(baseFare + totalDistance * perKmCharge);
 
         // Calculate profits based on the total price
-        const adminProfit = (adminProfitPercentage / 100) * totalPrice;
-        const driverProfit = totalPrice - adminProfit; // Driver's profit
+        const adminProfit = Math.ceil(
+          (adminProfitPercentage / 100) * totalPrice
+        );
+        const driverProfit = Math.ceil(totalPrice - adminProfit); // Driver's profit
 
         const estimatedTimeToPickup = driverDistanceToPickup / averageSpeed; // Time in hours
 
@@ -115,9 +118,9 @@ export const findAvailableDrivers = asyncHandler(async (req, res) => {
           distanceToPickup: driverDistanceToPickup.toFixed(2) + " km",
           estimatedTimeToPickup:
             (estimatedTimeToPickup * 60).toFixed(2) + " mins", // Convert hours to minutes
-          totalPrice: totalPrice.toFixed(2), // Total price based on driver location
-          adminProfit: adminProfit.toFixed(2), // Admin profit based on total price
-          driverProfit: driverProfit.toFixed(2), // Driver profit
+          totalPrice: totalPrice, // Total price based on driver location
+          adminProfit: adminProfit, // Admin profit based on total price
+          driverProfit: driverProfit, // Driver profit
           // totalKm: totalKmPickupToDrop.toFixed(2) + " km", // Distance from pickup to drop
         };
       })
@@ -129,7 +132,7 @@ export const findAvailableDrivers = asyncHandler(async (req, res) => {
       isAvailable: true,
     };
 
-    // console.log(resData)
+    // console.log(resData);
 
     return res
       .status(200)
@@ -222,8 +225,8 @@ export const acceptRide = (io) =>
 
       // Calculate admin and driver profits based on the total price
       const adminPercentage = process.env.ADMIN_PERCENTAGE; // Admin percentage
-      const adminAmount = (adminPercentage / 100) * totalPrice;
-      const driverProfit = totalPrice - adminAmount;
+      const adminAmount = Math.ceil((adminPercentage / 100) * totalPrice);
+      const driverProfit = Math.ceil(totalPrice - adminAmount);
 
       // Generate OTPs
       const pickupOtp = generateOtp();
@@ -490,22 +493,12 @@ export const verifyDropOtp = (io) =>
       rider.is_on_ride = false;
       rider.current_ride_id = null;
 
-      // Add ride details to the rider's ride_details array
-      // rider.ride_details.push({
-      //   rideDetailsId: new mongoose.Types.ObjectId(rideId),
-      //   paymentMode: ride.payment_mode, // Ensure payment mode is added
-      // });
       await rider.save();
 
       // Update the driver's status and ride details
       driver.is_on_ride = false;
       driver.current_ride_id = null;
 
-      // Add ride details to the driver's ride_details array
-      // driver.ride_details.push({
-      //   rideDetailsId: new mongoose.Types.ObjectId(rideId),
-      //   paymentMode: ride.payment_mode, // Ensure payment mode is added
-      // });
       await driver.save();
 
       // Update the ride status
@@ -643,7 +636,6 @@ export const updatePaymentMode = (io) =>
         );
     }
 
-    // Check if paymentMode is valid
     if (!["cash", "online"].includes(paymentMode)) {
       return res
         .status(400)
@@ -651,101 +643,94 @@ export const updatePaymentMode = (io) =>
     }
 
     try {
-      // Find the ride details by rideId
-      const ride = await RideDetails.findById(rideId);
+      // Fetch ride details
+      const ride = await RideDetails.findById(rideId).populate([
+        "driverId",
+        "riderId",
+        "adminId",
+      ]);
+
       if (!ride) {
         return res
           .status(404)
           .json(new ApiResponse(404, null, "Ride not found"));
       }
 
-      // Get the driverId and riderId from the ride details
-      const { driverId, riderId, adminId } = ride;
+      const {
+        driverId,
+        riderId,
+        adminId,
+        total_amount,
+        driver_profit,
+        admin_profit,
+      } = ride;
 
-      // Find the driver by driverId
+      // Fetch Driver, Admin, and Khata records
       const driver = await Driver.findById(driverId);
+      const admin = await Admin.findById(adminId);
+      const khata = await Khata.findOne({ driverId, adminId });
+
       if (!driver) {
         return res
           .status(404)
           .json(new ApiResponse(404, null, "Driver not found"));
       }
 
-      // Find the rider by riderId
-      const rider = await Rider.findById(riderId);
-      if (!rider) {
-        return res
-          .status(404)
-          .json(new ApiResponse(404, null, "Rider not found"));
-      }
-
-      // Find the admin related to the driver (if any)
-      const admin = await Admin.findById(adminId);
       if (!admin) {
         return res
           .status(404)
           .json(new ApiResponse(404, null, "Admin not found"));
       }
 
-      // Update the payment mode in the ride details
+      if (!khata) {
+        return res
+          .status(404)
+          .json(
+            new ApiResponse(
+              404,
+              null,
+              "Khata not found for this driver-admin pair"
+            )
+          );
+      }
+
+      // Update Ride Payment Mode
       ride.payment_mode = paymentMode;
       await ride.save();
 
-      // Update the driver's wallet and ride details
+      // Update Driver's Wallets
       if (paymentMode === "cash") {
-        driver.cash_wallet += ride.total_amount; // Add total amount to the driver's cash wallet
+        driver.cash_wallet += total_amount;
       } else if (paymentMode === "online") {
-        driver.online_wallet += ride.total_amount; // Add total amount to the driver's online wallet
+        driver.online_wallet += total_amount;
       }
 
-      // Add driver_profit to driver's due wallet
-      driver.due_wallet += ride.driver_profit;
+      driver.due_wallet += admin_profit;
 
-      // Update the driver's ride details with the new payment mode
-      const driverRideIndex = driver.ride_details.findIndex(
-        (detail) => detail.rideDetailsId.toString() === rideId
-      );
+      // Update Khata
+      khata.due_payment_details.push({
+        driverId,
+        rideId,
+        total_price: total_amount,
+        admin_profit,
+        driver_profit,
+        payment_mode: paymentMode,
+      });
 
-      if (driverRideIndex !== -1) {
-        driver.ride_details[driverRideIndex].paymentMode = paymentMode;
-      } else {
-        driver.ride_details.push({
-          rideDetailsId: new mongoose.Types.ObjectId(rideId),
-          paymentMode,
-        });
-      }
+      // Adjust driverdue and admindue in Khata
+      khata.driverdue += driver_profit; // Money owed by the driver increases
+      khata.admindue += admin_profit; // Money owed by the admin increases
 
       await driver.save();
+      await khata.save();
 
-      // Update the rider's ride details
-      const riderRideIndex = rider.ride_details.findIndex(
-        (detail) => detail.rideDetailsId.toString() === rideId
-      );
-
-      if (riderRideIndex !== -1) {
-        rider.ride_details[riderRideIndex].paymentMode = paymentMode;
-      } else {
-        rider.ride_details.push({
-          rideDetailsId: new mongoose.Types.ObjectId(rideId),
-          paymentMode,
-        });
-      }
-
-      await rider.save();
-
-      // If admin exists, update their due payment details
-      if (admin) {
-        // Add admin_profit to admin's due payment
-        admin.due_wallet += ride.driver_profit;
-        admin.due_payment_details.push({
-          driverId: driverId,
-          due_payment: ride.admin_profit,
-        });
-        await admin.save();
-      }
+      // Update Admin's Wallet
+      admin.due_wallet += admin_profit;
+      await admin.save();
 
       // Emit updates to the rider and driver
-      if (rider.socketId) {
-        io.to(rider.socketId).emit("paymentModeUpdated", {
+      if (ride.riderId?.socketId) {
+        io.to(ride.riderId.socketId).emit("paymentModeUpdated", {
           message: "Payment mode updated successfully",
           rideId: ride._id,
           paymentMode,

@@ -8,6 +8,11 @@ const dueRequestSchema = new Schema(
       required: true,
       refPath: "Driver", // Refers to the "Driver" model or another model depending on the context
     },
+    adminId: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      refPath: "Driver", // Refers to the "Driver" model or another model depending on the context
+    },
     dueAmount: {
       type: Number,
       required: true,
@@ -47,7 +52,7 @@ const dueRequestSchema = new Schema(
     },
     paymentPhoto: {
       type: String,
-      required: true, 
+      required: true,
     },
   },
   {
