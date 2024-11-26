@@ -667,8 +667,15 @@ export const updatePaymentMode = (io) =>
 
       // Fetch Driver, Admin, and Khata records
       const driver = await Driver.findById(driverId);
+      const rider = await Rider.findById(riderId);
       const admin = await Admin.findById(adminId);
       const khata = await Khata.findOne({ driverId, adminId });
+
+      if (!rider) {
+        return res
+          .status(404)
+          .json(new ApiResponse(404, null, "Rider not found"));
+      }
 
       if (!driver) {
         return res
@@ -707,6 +714,18 @@ export const updatePaymentMode = (io) =>
 
       driver.due_wallet += admin_profit;
 
+      // Update Driver's ride details
+      driver.ride_details.push({
+        rideDetailsId: rideId,
+        paymentMode,
+      });
+
+      // Update Rider's ride details
+      rider.ride_details.push({
+        rideDetailsId: rideId,
+        paymentMode,
+      });
+     
       // Update Khata
       khata.due_payment_details.push({
         driverId,
@@ -721,6 +740,7 @@ export const updatePaymentMode = (io) =>
       khata.driverdue += driver_profit; // Money owed by the driver increases
       khata.admindue += admin_profit; // Money owed by the admin increases
 
+      await rider.save();
       await driver.save();
       await khata.save();
 

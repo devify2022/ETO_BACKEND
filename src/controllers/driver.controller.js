@@ -319,18 +319,23 @@ export const getRideHistory = asyncHandler(async (req, res) => {
   }
 
   try {
-    // Find the driver by ID
-    const driver = await Driver.findById(id);
+    // Find the driver by ID and populate ride_details.rideDetailsId to ensure proper references.
+    const driver = await Driver.findById(id).populate(
+      "ride_details.rideDetailsId"
+    );
     if (!driver) {
       return res
         .status(404)
         .json(new ApiResponse(404, null, "Driver not found"));
     }
 
-    // Extract ride IDs from ride_details array
-    const rideIds = driver.ride_details.map((ride) => ride.rideDetailsId);
+    // Ensure ride_details array is valid and extract ride IDs
+    const rideIds =
+      driver.ride_details?.map(
+        (ride) => ride.rideDetailsId?._id || ride.rideDetailsId
+      ) || [];
 
-    if (!rideIds || rideIds.length === 0) {
+    if (!rideIds.length) {
       return res
         .status(404)
         .json(
