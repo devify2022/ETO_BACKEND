@@ -808,7 +808,6 @@ export const createWithdrawalLogs = asyncHandler(async (req, res) => {
 // Get Top Drivers Based on Number of Rides
 export const getTopDrivers = asyncHandler(async (req, res) => {
   try {
-    // Aggregate the rides to get the number of rides per driver
     const topDrivers = await RideDetails.aggregate([
       {
         $group: {
@@ -818,7 +817,7 @@ export const getTopDrivers = asyncHandler(async (req, res) => {
       },
       {
         $lookup: {
-          from: "drivers", // Look up the driver details from the Driver collection
+          from: "drivers", // Collection name for Driver
           localField: "_id",
           foreignField: "_id",
           as: "driverDetails",
@@ -835,18 +834,16 @@ export const getTopDrivers = asyncHandler(async (req, res) => {
       },
       {
         $project: {
-          driverId: "$_id",
-          name: "$driverDetails.name", // Assuming the driver details contain a name field
-          rideCount: 1,
-          photo: "$driverDetails.photo", // Assuming driver photo exists in the driver document
+          _id: 0, // Exclude the aggregation `_id` field (if not required)
+          driverId: "$driverDetails._id", // Driver ID
+          rideCount: 1, // Number of rides
+          driverDetails: 1, // Include all fields from `driverDetails`
         },
       },
     ]);
 
     if (topDrivers.length === 0) {
-      return res
-        .status(404)
-        .json(new ApiResponse(404, [], "No drivers found"));
+      return res.status(404).json(new ApiResponse(404, [], "No drivers found"));
     }
 
     return res
