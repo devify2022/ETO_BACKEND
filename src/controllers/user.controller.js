@@ -332,6 +332,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
     // If the user is a driver
     if (user.isDriver) {
       const driverDetails = await Driver.findOne({ phone });
+      // console.log(driverDetails);
       const msg = {
         role: "driver",
         isVerified: user.isVerified,
@@ -345,6 +346,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
           isVerified: user.isVerified,
           isDriver: user.isDriver,
           isAdmin: user.isAdmin,
+          isApproved: driverDetails?.isApproved || false,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         }, // Send driver details if available
