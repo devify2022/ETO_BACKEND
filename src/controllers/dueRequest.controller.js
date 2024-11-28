@@ -58,12 +58,12 @@ export const createDueRequest = asyncHandler(async (req, res) => {
   }
 });
 
-// Get all due requests with pending status and driver details populated
+// Get all due requests with pending status, driver details, and ride details
 export const getAllPendingDueRequests = asyncHandler(async (req, res) => {
   try {
-    // Fetch all due requests that are pending and populate driver details
+    // Fetch all due requests with pending status
     const dueRequests = await DueRequest.find({ status: "pending" })
-      .populate("requestedBy", "driver_photo phone name") // Populate specific fields from the Driver model
+      .populate("requestedBy", "name phone driver_photo") // Populate driver fields
       .exec();
 
     if (dueRequests.length === 0) {
@@ -72,12 +72,47 @@ export const getAllPendingDueRequests = asyncHandler(async (req, res) => {
         .json(new ApiResponse(404, null, "No pending due requests found"));
     }
 
+    // Format response with additional ride details for each request
+    const formattedDueRequests = await Promise.all(
+      dueRequests.map(async (request) => {
+        const driver = await Driver.findOne({
+          userId: request.requestedBy._id,
+        }); // Find driver by userId
+        if (!driver) {
+          return {
+            _id: request._id,
+            amount: request.amount,
+            requestedAt: request.createdAt,
+            status: request.status,
+            driver: null,
+            rides: null,
+          };
+        }
+
+        const khata = await Khata.findOne({ driverId: driver._id }); // Find rides from Khata
+        const rideDetails = khata?.due_payment_details || [];
+
+        return {
+          _id: request._id,
+          amount: request.amount,
+          requestedAt: request.createdAt,
+          status: request.status,
+          driver: {
+            name: driver.name || "N/A",
+            phone: driver.phone || "N/A",
+            photo: driver.driver_photo || null,
+          },
+          rides: rideDetails, // Include all ride details
+        };
+      })
+    );
+
     return res
       .status(200)
       .json(
         new ApiResponse(
           200,
-          { dueRequests },
+          { dueRequests: formattedDueRequests },
           "All pending due requests fetched successfully."
         )
       );
