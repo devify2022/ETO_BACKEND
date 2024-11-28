@@ -21,6 +21,7 @@ import {
   getUnapprovedDrivers,
   approveDriverByDriverId,
   getTodaysEarnings,
+  getApprovedStatus,
 } from "../controllers/driver.controller.js";
 import { getETOCardById } from "../controllers/etoController.js";
 
@@ -35,6 +36,7 @@ router.route("/eto-card/:id").get(getETOCardById);
 router.route("/activate/:id").put(activateDriver);
 router.route("/deactivate/:id").put(deactivateDriver);
 router.route("/approve").patch(approveDriverByDriverId);
+router.route("/checkApprove/:userId").get(getApprovedStatus);
 router.route("/delete/:id").delete(deleteDriver);
 router.route("/").get(getAllDrivers);
 router.route("/rideDetails/:id").get(getDriverRideById);

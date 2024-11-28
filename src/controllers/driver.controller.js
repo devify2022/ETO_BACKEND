@@ -979,6 +979,40 @@ export const getApprovedDrivers = asyncHandler(async (req, res) => {
   }
 });
 
+// Get the approval status of a driver by userId
+export const getApprovedStatus = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Find the driver by userId
+    const driver = await Driver.findOne({ userId });
+
+    if (!driver) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Driver not found"));
+    }
+
+    // Send the isApproved status
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          isApproved: driver.isApproved,
+        },
+        "Driver approval status fetched successfully"
+      )
+    );
+  } catch (error) {
+    console.error("Error fetching driver approval status:", error.message);
+    return res
+      .status(500)
+      .json(
+        new ApiResponse(500, null, "Failed to fetch driver approval status")
+      );
+  }
+});
+
 // Approve a driver by ID
 export const approveDriverByDriverId = asyncHandler(async (req, res) => {
   const { driverId, adminId } = req.body;

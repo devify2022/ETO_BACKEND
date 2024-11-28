@@ -16,7 +16,6 @@ function generatedTranscId() {
 
 // endpoint to initiate a payment
 export const createPayment = async function (req, res, next) {
-  // console.log("bosikoron");
 
   // const { useId, amount, mobileNumber } = req.body;
 
