@@ -72,7 +72,7 @@ export const getAllPendingDueRequests = asyncHandler(async (req, res) => {
         .json(new ApiResponse(404, null, "No pending due requests found"));
     }
 
-    // Format response with additional ride details for each request
+    // Format response with additional details for each request
     const formattedDueRequests = await Promise.all(
       dueRequests.map(async (request) => {
         const driver = await Driver.findOne({
@@ -86,6 +86,11 @@ export const getAllPendingDueRequests = asyncHandler(async (req, res) => {
             status: request.status,
             driver: null,
             rides: null,
+            dueAmount: request.dueAmount || null,
+            notes: request.notes || "No notes provided",
+            paymentMethod: request.paymentMethod || "Unknown",
+            paidAmount: request.paidAmount || 0,
+            paymentPhoto: request.paymentPhoto || null,
           };
         }
 
@@ -103,6 +108,11 @@ export const getAllPendingDueRequests = asyncHandler(async (req, res) => {
             photo: driver.driver_photo || null,
           },
           rides: rideDetails, // Include all ride details
+          dueAmount: request.dueAmount || null,
+          notes: request.notes || "No notes provided",
+          paymentMethod: request.paymentMethod || "Unknown",
+          paidAmount: request.paidAmount || 0,
+          paymentPhoto: request.paymentPhoto || null,
         };
       })
     );
