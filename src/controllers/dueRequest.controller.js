@@ -143,7 +143,7 @@ export const updateDueRequestStatus = asyncHandler(async (req, res) => {
     }
 
     // Update the due wallet of the driver and admin
-    const driver = await Driver.findById(dueRequest.requestedBy);
+    const driver = await Driver.findOne({ userId: dueRequest.requestedBy });
     const admin = await Admin.findById(dueRequest.adminId);
 
     // console.log("Driver", driver);
@@ -187,10 +187,7 @@ export const updateDueRequestStatus = asyncHandler(async (req, res) => {
 
       // Remove the payment details from Khata's due_payment_details after approval
       khata.due_payment_details = khata.due_payment_details.filter(
-        (payment) =>
-          !(
-            payment.driverId.equals(driver._id)
-          )
+        (payment) => !payment.driverId.equals(driver._id)
       );
 
       console.log(

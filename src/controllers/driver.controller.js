@@ -582,6 +582,63 @@ export const getTodaysRides = asyncHandler(async (req, res) => {
   }
 });
 
+// Get Today's Earnings
+export const getTodaysEarnings = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Fetch the driver using the userId
+    const driver = await Driver.findOne({ userId: userId });
+
+    if (!driver) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Driver not found"));
+    }
+
+    // Get today's start and end timestamps
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    // Perform the aggregation to calculate today's earnings
+    const result = await RideDetails.aggregate([
+      {
+        $match: {
+          driverId: new mongoose.Types.ObjectId(driver._id),
+          ride_end_time: { $gte: todayStart, $lte: todayEnd },
+        },
+      },
+      {
+        $group: {
+          _id: null, // No grouping by field; just sum the total
+          totalEarnings: { $sum: "$driver_profit" },
+        },
+      },
+    ]);
+
+    let totalEarnings = result.length > 0 ? result[0].totalEarnings : 0;
+    totalEarnings = Math.ceil(totalEarnings);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { totalEarnings },
+          "Today's earnings fetched successfully"
+        )
+      );
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to fetch today's earnings"));
+  }
+});
+
 // Get Total Earings by date
 export const getTotalEarningByDate = asyncHandler(async (req, res) => {
   const { driverId, startDate, endDate } = req.body;
