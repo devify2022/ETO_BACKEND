@@ -641,35 +641,45 @@ export const getTodaysEarnings = asyncHandler(async (req, res) => {
 
 // Get Total Earings by date
 export const getTotalEarningByDate = asyncHandler(async (req, res) => {
-  const { driverId, startDate, endDate } = req.body;
+  const { userId } = req.params;
+  const { fromDate, toDate } = req.body;
 
   try {
-    // Convert startDate and endDate to Date objects to ensure proper query comparison
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    // Adjust endDate to include the full day (23:59:59) if startDate != endDate
-    if (startDate !== endDate) {
-      end.setHours(23, 59, 59, 999); // Include the full range of the day
+    // Validate the dates
+    if (!fromDate || !toDate) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(400, null, "Both fromDate and toDate are required")
+        );
     }
 
-    // Create the query condition
-    const dateFilter =
-      startDate === endDate
-        ? { ride_end_time: { $eq: start } } // Exact date match for same-day queries
-        : { ride_end_time: { $gte: start, $lte: end } }; // Date range query
+    const start = new Date(fromDate);
+    const end = new Date(toDate);
 
-    // Perform the aggregation to sum the driver profits for the given date(s)
+    // Adjust `end` to include the entire end date
+    end.setHours(23, 59, 59, 999);
+
+    // Fetch the driver
+    const driver = await Driver.findOne({ userId });
+
+    if (!driver) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Driver not found"));
+    }
+
+    // Perform the aggregation to calculate earnings
     const result = await RideDetails.aggregate([
       {
         $match: {
-          driverId: new mongoose.Types.ObjectId(driverId),
-          ...dateFilter,
+          driverId: new mongoose.Types.ObjectId(driver._id),
+          ride_end_time: { $gte: start, $lte: end }, // Filter by date range
         },
       },
       {
         $group: {
-          _id: null, // No grouping by field; just sum the total
+          _id: null, // No grouping field; just sum all earnings
           totalEarnings: { $sum: "$driver_profit" },
         },
       },
@@ -677,6 +687,7 @@ export const getTotalEarningByDate = asyncHandler(async (req, res) => {
 
     let totalEarnings = result.length > 0 ? result[0].totalEarnings : 0;
     totalEarnings = Math.ceil(totalEarnings);
+
     return res
       .status(200)
       .json(
@@ -687,12 +698,12 @@ export const getTotalEarningByDate = asyncHandler(async (req, res) => {
         )
       );
   } catch (error) {
+    console.error(error);
     return res
       .status(500)
-      .json(new ApiResponse(500, null, "Failed to fetch total earnings"));
+      .json(new ApiResponse(500, null, "Failed to fetch earnings by date"));
   }
 });
-
 // Get Recent rides
 export const getRecentRides = asyncHandler(async (req, res) => {
   const { id } = req.params;

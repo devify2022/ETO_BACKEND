@@ -123,6 +123,10 @@ const rideDetailsSchema = new Schema(
       type: Boolean,
       default: false, // Indicates if drop OTP is verified
     },
+    isCancel_time: {
+      type: Boolean,
+      default: false, // Indicates if drop OTP is verified
+    },
   },
   { timestamps: true }
 );

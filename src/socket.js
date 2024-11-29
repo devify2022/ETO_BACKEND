@@ -3,6 +3,7 @@ import { Driver } from "./models/driver.model.js";
 import { Rider } from "./models/rider.model.js";
 import { RideDetails } from "./models/rideDetails.model.js";
 import geolib from "geolib";
+import { getEstimatedTime } from "./utils/getlocation.js";
 
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
@@ -304,6 +305,164 @@ export const setupSocketIO = (server) => {
             message: "Failed to emit driver location to rider",
           });
         }
+      }
+    });
+
+    // Listen for 'canceltime' event
+    socket.on("canceltime", async ({ rideId, canceltime }) => {
+      console.log(`Canceltime event received for ride ID: ${rideId}`);
+
+      try {
+        // Update the isCancel_time field in the database
+        const ride = await RideDetails.findByIdAndUpdate(
+          rideId,
+          { isCancel_time: canceltime },
+          { new: true } // Return the updated document
+        );
+
+        if (ride) {
+          console.log("Ride cancel time updated successfully:", ride);
+          // Optionally broadcast the update to other users (e.g., admin or driver)
+          socket.broadcast.emit("rideStatusUpdated", {
+            rideId,
+            status: "canceled",
+          });
+        } else {
+          console.log("Ride not found for the provided ID");
+        }
+      } catch (error) {
+        console.error("Error updating ride:", error.message);
+      }
+    });
+
+    // On socket "send_location" event=============================================================
+    // socket.on("send_location", async (locationData) => {
+    //   const { rideId, driverLocation } = locationData;
+    //   console.log("Location Data", locationData);
+
+    //   try {
+    //     // Fetch the ride details from the database using rideId
+    //     const rideDetails = await RideDetails.findById(rideId);
+    //     if (!rideDetails) {
+    //       socket.emit("error", { message: "Ride not found" });
+    //       return;
+    //     }
+
+    //     // Fetch the rider details using riderId from rideDetails
+    //     const rider = await Rider.findById(rideDetails.riderId);
+    //     if (!rider) {
+    //       socket.emit("error", { message: "Rider not found" });
+    //       return;
+    //     }
+
+    //     const riderSocketId = rider.socketId; // Assuming the rider model stores the socketId
+
+    //     // Extract the drop location from the ride details
+    //     const dropLocation = {
+    //       lat: rideDetails.drop_location.coordinates[1], // Correct order: latitude first
+    //       lng: rideDetails.drop_location.coordinates[0], // longitude second
+    //     };
+
+    //     // Format driver's location for API
+    //     const formattedDriverLocation = {
+    //       lat: driverLocation.latitude,
+    //       lng: driverLocation.longitude,
+    //     };
+
+    //     // Calculate the estimated time from the driver's current location to the drop location
+    //     const estimatedTimeToDrop = await getEstimatedTime(
+    //       formattedDriverLocation,
+    //       dropLocation
+    //     );
+
+    //     // Emit the updated data to the rider's socket
+    //     io.to(riderSocketId).emit("estimatedTimeToDrop", {
+    //       estimatedTimeToDrop,
+    //       message: "Estimated time to drop updated",
+    //     });
+    //   } catch (error) {
+    //     console.error("Error calculating estimated time:", error.message);
+    //     socket.emit("error", { message: "Unable to calculate estimated time" });
+    //   }
+    // });
+
+    //=============================================================
+
+    // On socket "send_location" event
+    socket.on("send_location", async (locationData) => {
+      const { rideId, driverLocation } = locationData;
+      console.log("Location Data", locationData);
+
+      try {
+        // Fetch the ride details from the database using rideId
+        const rideDetails = await RideDetails.findById(rideId);
+        if (!rideDetails) {
+          socket.emit("error", { message: "Ride not found" });
+          return;
+        }
+
+        // Fetch the rider details using riderId from rideDetails
+        const rider = await Rider.findById(rideDetails.riderId);
+        if (!rider) {
+          socket.emit("error", { message: "Rider not found" });
+          return;
+        }
+
+        const riderSocketId = rider.socketId; // Assuming the rider model stores the socketId
+
+        // Extract the drop location from the ride details
+        const dropLocation = {
+          lat: rideDetails.drop_location.coordinates[1], // Correct order: latitude first
+          lng: rideDetails.drop_location.coordinates[0], // longitude second
+        };
+
+        // Format driver's location for distance calculation
+        const formattedDriverLocation = {
+          lat: driverLocation.latitude,
+          lng: driverLocation.longitude,
+        };
+
+        // Calculate the distance in meters from driver to drop location
+        const driverToDropDistanceMeters = geolib.getDistance(
+          {
+            latitude: formattedDriverLocation.lat,
+            longitude: formattedDriverLocation.lng,
+          },
+          {
+            latitude: dropLocation.lat,
+            longitude: dropLocation.lng,
+          }
+        );
+
+        // Convert distance to kilometers
+        const driverToDropDistanceKm = driverToDropDistanceMeters / 1000;
+        console.log(
+          "Driver Distance to Drop Location (kilometers):",
+          driverToDropDistanceKm
+        );
+
+        // Average speed in km/h (you can adjust this based on your needs)
+        const averageSpeed = 40; // km/h
+
+        // Calculate the estimated time in hours
+        const estimatedTimeToDropHours = driverToDropDistanceKm / averageSpeed;
+
+        // Convert hours to minutes
+        const estimatedTimeToDropMinutes = estimatedTimeToDropHours * 60;
+
+        console.log(
+          "Estimated Time to Drop Location (minutes):",
+          estimatedTimeToDropMinutes.toFixed(2)
+        );
+
+        // Emit the updated data to the rider's socket
+        io.to(riderSocketId).emit("estimatedTimeToDrop", {
+          estimatedTimeToDrop: estimatedTimeToDropMinutes.toFixed(2) + " mins",
+          message: "Estimated time to drop updated",
+        });
+      } catch (error) {
+        console.error("Error calculating estimated time:", error.message);
+        socket.emit("error", { message: "Unable to calculate estimated time" });
       }
     });
 

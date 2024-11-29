@@ -50,7 +50,7 @@ router.route("/getTotalWithdrawalsByDate").post(getTotalWithdrawalsByDate);
 
 // The dynamic ID route should be last to avoid conflicts
 router.route("/getRecentRides/:id").get(getRecentRides);
-router.route("/getTotalEarningByDate").get(getTotalEarningByDate);
+router.route("/getTotalEarningByDate/:userId").post(getTotalEarningByDate);
 router.route("/getTodaysEarnings/:userId").get(getTodaysEarnings);
 router.route("/:id").get(getDriverById);
 
