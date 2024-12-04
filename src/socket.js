@@ -3,7 +3,7 @@ import { Driver } from "./models/driver.model.js";
 import { Rider } from "./models/rider.model.js";
 import { RideDetails } from "./models/rideDetails.model.js";
 import geolib from "geolib";
-import { getEstimatedTime } from "./utils/getlocation.js";
+// import { getEstimatedTime } from "./utils/getlocation.js";
 
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
