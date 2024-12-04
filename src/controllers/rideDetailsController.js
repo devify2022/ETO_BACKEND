@@ -6,9 +6,9 @@ import { RideDetails } from "../models/rideDetails.model.js";
 import mongoose from "mongoose";
 import geolib from "geolib";
 import dotenv from "dotenv";
-import { ApiResponse } from "../utils/ApiResponse.js";
 import { Admin } from "../models/admin.model.js";
 import { Khata } from "../models/khata.model.js";
+import ApiResponse from "../utils/ApiResponse.js";
 
 dotenv.config({
   path: "./env",

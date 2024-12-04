@@ -3,8 +3,8 @@ import { Admin } from "../models/admin.model.js";
 import { Driver } from "../models/driver.model.js";
 import { DueRequest } from "../models/dueRequest.model.js";
 import { Khata } from "../models/khata.model.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import ApiResponse from "../utils/ApiResponse.js";
 
 // Create Due Request
 export const createDueRequest = asyncHandler(async (req, res) => {

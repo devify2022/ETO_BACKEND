@@ -1,6 +1,6 @@
 import { Admin } from "../models/admin.model.js";
 import { User } from "../models/user.model.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
+import ApiResponse from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 // Create Admin
