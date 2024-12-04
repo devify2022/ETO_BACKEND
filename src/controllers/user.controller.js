@@ -1,4 +1,4 @@
-import { ObjectId } from "bson";
+import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
 import jwt from "jsonwebtoken";
@@ -9,7 +9,6 @@ import {
   validateOtpViaMessageCentral,
 } from "../utils/sentOtp.js";
 import { Admin } from "../models/admin.model.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
 
 // Generate Access and Refresh Tokens
 const generateAccessAndRefreshToken = async (userId) => {
