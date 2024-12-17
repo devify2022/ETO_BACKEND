@@ -244,6 +244,8 @@ export const acceptRide = (io) =>
         adminId: admin._id,
         driverId: driver._id,
         riderId: rider._id,
+        driverNumber: Number(driver.phone),
+        riderNumber: Number(rider.phone),
         pickup_location: {
           type: "Point",
           coordinates: pickup_location, // [longitude, latitude]
@@ -725,7 +727,7 @@ export const updatePaymentMode = (io) =>
         rideDetailsId: rideId,
         paymentMode,
       });
-     
+
       // Update Khata
       khata.due_payment_details.push({
         driverId,

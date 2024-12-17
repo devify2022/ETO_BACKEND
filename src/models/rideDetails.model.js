@@ -19,6 +19,12 @@ const rideDetailsSchema = new Schema(
       ref: "Rider",
       required: true,
     },
+    driverNumber: {
+      type: Number,
+    },
+    riderNumber: {
+      type: Number,
+    },
     // Define pickup_location as a GeoJSON Point
     pickup_location: {
       type: {
