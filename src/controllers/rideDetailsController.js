@@ -57,6 +57,7 @@ export const findAvailableDrivers = asyncHandler(async (req, res) => {
       },
       isActive: true,
       is_on_ride: false,
+      due_wallet: { $lt: 500 },
     });
 
     if (availableDrivers.length === 0) {

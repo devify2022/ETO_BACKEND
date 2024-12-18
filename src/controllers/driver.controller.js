@@ -737,6 +737,42 @@ export const getRecentRides = asyncHandler(async (req, res) => {
   }
 });
 
+// Get Due Wallet Balance and Total Earnings
+export const getWalletBalance = asyncHandler(async (req, res) => {
+  const { userId } = req.params; // Extract userId from request parameters
+
+  try {
+    // Find the driver by userId
+    const driver = await Driver.findOne({ userId });
+
+    if (!driver) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Driver not found"));
+    }
+
+    // Get the due_wallet and total_earning balance
+    const dueWalletBalance = driver.due_wallet;
+    const totalEarnings = driver.total_earning;
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { dueWalletBalance, totalEarnings },
+          "Wallet details fetched successfully"
+        )
+      );
+  } catch (error) {
+    console.error("Error fetching wallet details:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to fetch wallet details"));
+  }
+});
+
+
 export const getTotalWithdrawalsByDate = asyncHandler(async (req, res) => {
   const { driverId, fromDate, toDate } = req.body;
   try {
