@@ -4,7 +4,7 @@ import { Driver } from "../models/driver.model.js";
 import { DueRequest } from "../models/dueRequest.model.js";
 import { Khata } from "../models/khata.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import ApiResponse from "../utils/ApiResponse.js";
+import ApiResponse from "../utils/apiResponse.js";
 
 // Create Due Request
 export const createDueRequest = asyncHandler(async (req, res) => {

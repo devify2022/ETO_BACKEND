@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Rider } from "../models/rider.model.js";
 import { RideDetails } from "../models/rideDetails.model.js";
-import ApiResponse from "../utils/ApiResponse.js";
+import ApiResponse from "../utils/apiResponse.js";
 
 // Get All Riders Function
 export const getAllRiders = asyncHandler(async (req, res) => {
