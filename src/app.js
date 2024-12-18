@@ -17,10 +17,11 @@ const io = setupSocketIO(server); // Use the same server for Socket.IO
 // Middleware configuration
 app.use(
   cors({
-    origin: ["http://192.168.31.227:8081", "http://localhost:8081"], // Set your React app origin
-    credentials: true,
+    origin: "*", // Allows requests from any origin
+    credentials: true, // Allows cookies to be sent across domains
   })
 );
+
 
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
