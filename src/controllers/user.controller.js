@@ -8,7 +8,7 @@ import {
   validateOtpViaMessageCentral,
 } from "../utils/sentOtp.js";
 import { Admin } from "../models/admin.model.js";
-import  ApiResponse  from "../utils/apiResponse.js";
+import ApiResponse from "../utils/apiResponse.js";
 
 // Generate Access and Refresh Tokens
 const generateAccessAndRefreshToken = async (userId) => {
@@ -64,6 +64,11 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
   }
 
   let user = await User.findOne({ phone });
+
+  if (!userDetails && user?.isDriver) {
+    user = null;
+    await User.findOneAndDelete({ phone });
+  }
 
   if (userDetails) {
     if (!user) {
