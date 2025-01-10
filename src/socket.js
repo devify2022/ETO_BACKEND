@@ -446,7 +446,7 @@ export const setupSocketIO = (server) => {
 
         // Calculate the estimated time in hours
         const estimatedTimeToDropHours = driverToDropDistanceKm / averageSpeed;
-
+ 
         // Convert hours to minutes
         const estimatedTimeToDropMinutes = estimatedTimeToDropHours * 60;
 
