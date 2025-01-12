@@ -661,7 +661,7 @@ export const getTotalEarningByDate = asyncHandler(async (req, res) => {
     end.setHours(23, 59, 59, 999);
 
     // Fetch the driver
-    const driver = await Driver.findOne({ userId });
+    const driver = await Driver.findById(userId);
 
     if (!driver) {
       return res

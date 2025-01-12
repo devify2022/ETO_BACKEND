@@ -64,7 +64,19 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
   }
 
   let user = await User.findOne({ phone });
+  
+  if (user &&
+    ( (user.isAdmin && !isAdmin) ||
+      (user.isDriver && !isDriver) ||
+      (role === "passenger" && (user.isAdmin || user.isDriver)) )
+  ) {
 
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Phone number already exists as another role"));
+
+  }
+  
   if (!userDetails && user?.isDriver) {
     user = null;
     await User.findOneAndDelete({ phone });
