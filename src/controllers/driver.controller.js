@@ -11,7 +11,7 @@ import { mongoose } from "mongoose";
 import { Rider } from "../models/rider.model.js";
 import { generateRandom3DigitNumber } from "../utils/otpGenerate.js";
 import { Khata } from "../models/khata.model.js";
-import ApiResponse from "../utils/ApiResponse.js";
+import ApiResponse from "../utils/apiResponse.js";
 
 // Create Driver Function
 export const createDriver = asyncHandler(async (req, res) => {

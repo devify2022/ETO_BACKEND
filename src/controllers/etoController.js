@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ETOCard } from "../models/eto.model.js";
 import { ApiError } from "../utils/apiError.js";
-import ApiResponse from "../utils/ApiResponse.js";
+import ApiResponse from "../utils/apiResponse.js";
 
 export const getETOCardById = asyncHandler(async (req, res) => {
   const { id } = req.params;
