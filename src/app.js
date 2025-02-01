@@ -36,6 +36,7 @@ import createRideDetailsRouter from "./routes/rideDetails.routes.js";
 import dueRequestRouter from "./routes/dueRequest.routes.js";
 import etoRouter from "./routes/eto.routes.js";
 import paymentRouter from "./routes/payment.routes.js";
+import ratingRouter from "./routes/rating.routes.js";
 
 app.use("/eto/api/v1/auth", userRouter);
 app.use("/eto/api/v1/admin", adminRouter);
@@ -45,6 +46,7 @@ app.use("/eto/api/v1/rides", createRideDetailsRouter(io));
 app.use("/eto/api/v1/dueRequest", dueRequestRouter);
 app.use("/eto/api/v1/eto", etoRouter);
 app.use("/", paymentRouter);
+app.use("/eto/api/v1/rating", ratingRouter);
 
 // Home route
 app.get("/", (req, res) => {
