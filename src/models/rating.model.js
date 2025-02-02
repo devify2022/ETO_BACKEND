@@ -8,9 +8,9 @@ const ratingSchema = new Schema(
       ref: "Rider",
       required: [true, "riderId ID is required"],
     },
-    driverId: {
+    driverUserId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Driver",
+      ref: "User",
       required: [true, "driverId ID is required"],
     },
     message: {
