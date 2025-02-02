@@ -1,6 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/apiResponse.js";
 import { Rating } from "../models/rating.model.js";
+import { ObjectId } from "mongoose";
 
 // Get All Ratings Function
 export const getAllRatings = asyncHandler(async (req, res) => {
@@ -27,7 +28,28 @@ export const getRatingsById = asyncHandler(async (req, res) => {
       .status(400)
       .json(new ApiResponse(400, null, "Missing  driverId"));
 
-    const ratings = await Rating.find({driverId:driverId});
+    const ratings = await Rating.find({driverId});
+
+    // const ratings = await Rating.aggregate([
+    //   { $match: { driverId } }, // Ensure driverId is ObjectId
+    //   // {
+    //   //   $lookup: {
+    //   //     from: 'riders',  
+    //   //     localField: 'riderId', // Ensure this field exists in `ratings`
+    //   //     foreignField: '_id',
+    //   //     as: 'riderDetails',
+    //   //   },
+    //   // },
+    //   // { $unwind: { path: '$riderDetails', preserveNullAndEmptyArrays: true } }, // Handle cases where there is no match
+    //   // {
+    //   //   $project: {
+    //   //     _id: 1,
+    //   //     rating: 1,
+    //   //     review: 1,
+    //   //     'riderDetails.name': 1,
+    //   //   },
+    //   // },
+    // ]);
 
     return res
       .status(200)
