@@ -8,7 +8,7 @@ import {
   validateOtpViaMessageCentral,
 } from "../utils/sentOtp.js";
 import { Admin } from "../models/admin.model.js";
-import  ApiResponse  from "../utils/apiResponse.js";
+import ApiResponse from "../utils/apiResponse.js";
 
 // Generate Access and Refresh Tokens
 const generateAccessAndRefreshToken = async (userId) => {
@@ -64,6 +64,23 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
   }
 
   let user = await User.findOne({ phone });
+  
+  if (user &&
+    ( (user.isAdmin && !isAdmin) ||
+      (user.isDriver && !isDriver) ||
+      (role === "passenger" && (user.isAdmin || user.isDriver)) )
+  ) {
+
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Phone number already exists as another role"));
+
+  }
+  
+  if (!userDetails && user?.isDriver) {
+    user = null;
+    await User.findOneAndDelete({ phone });
+  }
 
   if (userDetails) {
     if (!user) {
