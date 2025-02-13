@@ -117,14 +117,14 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
         }
 
         // Check if the OTP request was successful
-        if (otpCredentials?.responseCode !== 200) {
+        if (otpResponse?.responseCode !== 200) {
           return res
             .status(400)
             .json(
               new ApiResponse(
                 400,
-                otpCredentials,
-                `OTP request failed: ${otpCredentials.message || "Unknown error"}`
+                otpResponse,
+                `OTP request failed: ${otpResponse.message || "Unknown error"}`
               )
             );
         }
@@ -156,18 +156,6 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
   } else {
     // Handle new user registration
     if (user) {
-      if (user.isDriver !== isDriver || user.isAdmin !== isAdmin) {
-        return res
-          .status(409)
-          .json(
-            new ApiResponse(
-              409,
-              null,
-              `This number is already used as a ${user.isDriver ? "driver" : user.isAdmin ? "admin" : "passenger"}.`
-            )
-          );
-      }
-
       user.isVerified = false;
       await user.save();
     } else {
@@ -203,14 +191,14 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
         }
 
         // Check if the OTP request was successful
-        if (otpCredentials?.responseCode !== 200) {
+        if (otpResponse?.responseCode !== 200) {
           return res
             .status(400)
             .json(
               new ApiResponse(
                 400,
-                otpCredentials,
-                `OTP request failed: ${otpCredentials.message || "Unknown error"}`
+                otpResponse,
+                `OTP request failed: ${otpResponse.message || "Unknown error"}`
               )
             );
         }

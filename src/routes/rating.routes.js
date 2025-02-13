@@ -4,7 +4,7 @@ import { createRatings, getAllRatings, getRatingsById } from "../controllers/rat
 const router = Router();
 
 router.route("/").get(getAllRatings);
-router.route("/:driverId").get(getRatingsById);
+router.route("/:driverUserId").get(getRatingsById);
 router.route("/addRating").post(createRatings);
 
 
