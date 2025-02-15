@@ -474,7 +474,7 @@ export const setupSocketIO = (server) => {
         // Find the driver by socketId and remove the socketId when disconnected
         await Driver.findOneAndUpdate(
           { socketId: socket.id },
-          { socketId: null }
+          { socketId: null ,isActive:false}
         );
         console.log(`Driver with socket ${socket.id} disconnected`);
       } catch (error) {
