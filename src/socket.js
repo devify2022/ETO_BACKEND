@@ -18,8 +18,8 @@ export const setupSocketIO = (server) => {
 
     // Register Driver Socket ID with location update and isActive check
     socket.on("registerDriver", async (data) => {
-      // console.log(data)
-      const { driverId, lat, lng } = data;
+      console.log({data})
+      const { driverId, lat=1, lng=1 } = data;
       if (!driverId || !lat || !lng) {
         return socket.emit("error", {
           message: "Driver ID and location required",
