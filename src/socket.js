@@ -8,7 +8,7 @@ import geolib from "geolib";
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: ["http://192.168.1.3:8081", "http://localhost:8081"], // Set your React app origin
+      origin: ["http://192.168.1.3:8081"], // Set your React app origin
       credentials: true,
     },
   });
