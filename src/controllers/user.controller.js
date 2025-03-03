@@ -233,48 +233,124 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
 // OTP Verification Controller
 export const verifyOtp = asyncHandler(async (req, res) => {
   const { phone, verificationId, code } = req.body;
-
-  if (!phone || !verificationId || !code) {
-    return res
-      .status(400)
-      .json(
-        new ApiResponse(
-          400,
-          null,
-          "Phone number, verification ID, and OTP code are required"
-        )
-      );
-  }
-
-  let user = await User.findOne({ phone });
-  if (!user) {
-    return res.status(404).json(new ApiResponse(404, null, "User not found"));
-  }
-
-  const bypassNumbers = ["7872358979", "9733524164"];
-  if (
-    bypassNumbers.includes(phone) &&
-    verificationId === "1234567" &&
-    code === "1234"
-  ) {
-    user.isVerified = true;
-    await user.save();
-
-    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-      user._id
-    );
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          { accessToken, refreshToken, user },
-          "OTP bypassed and verified successfully"
-        )
-      );
-  }
-
   try {
+    if (!phone || !verificationId || !code) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            null,
+            "Phone number, verification ID, and OTP code are required"
+          )
+        );
+    }
+
+    let user = await User.findOne({ phone });
+    if (!user) {
+      return res.status(404).json(new ApiResponse(404, null, "User not found"));
+    }
+
+    const bypassNumbers = ["7872358979", "9733524164"];
+    if (
+      bypassNumbers.includes(phone) &&
+      verificationId === "1234567" &&
+      code === "1234"
+    ) {
+      user.isVerified = true;
+      await user.save();
+
+      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+        user._id
+      );
+
+      // If the user is an admin, return the admin details
+      if (user.isAdmin) {
+        const adminDetails = await Admin.findOne({ phone });
+
+        const msg = {
+          role: "admin",
+          isVerified: user.isVerified,
+          isNewAdmin: !adminDetails, // New admin if no details found
+          phone: user.phone,
+          accessToken,
+          refreshToken,
+          userDetails: adminDetails || {
+            userId: user._id,
+            phone: user.phone,
+            isVerified: user.isVerified,
+            isDriver: user.isDriver,
+            isAdmin: user.isAdmin,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+          }, // Send admin details if available
+        };
+
+        return res
+          .status(200)
+          .json(new ApiResponse(200, msg, "OTP verified for admin"));
+      }
+
+      // If the user is a driver , return the driver details
+      if (user.isDriver) {
+        const driverDetails = await Driver.findOne({ phone });
+        // console.log(driverDetails);
+        const msg = {
+          role: "driver",
+          isVerified: user.isVerified,
+          isNewDriver: !driverDetails, // New driver if no details found
+          phone: user.phone,
+          accessToken,
+          refreshToken,
+          userDetails: driverDetails || {
+            userId: user._id,
+            phone: user.phone,
+            isVerified: user.isVerified,
+            isDriver: user.isDriver,
+            isAdmin: user.isAdmin,
+            isApproved: driverDetails?.isApproved || false,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+          }, // Send driver details if available
+        };
+
+        return res
+          .status(200)
+          .json(new ApiResponse(200, msg, "OTP verified for driver"));
+      } else {
+        // If the user is a passenger (non-driver)
+        let passengerDetails = await Rider.findOne({ phone });
+
+        if (!passengerDetails) {
+          // Create a new rider profile if not found
+          passengerDetails = new Rider({
+            name: "Rider", // Default name, can be updated later
+            phone,
+            userId: user._id,
+            current_location: {
+              type: "Point",
+              coordinates: [0, 0], // Default coordinates, can be updated later
+            },
+          });
+
+          await passengerDetails.save();
+        }
+
+        const msg = {
+          role: "passenger",
+          isNewPassenger: !passengerDetails, // New passenger if no details found
+          phone: user.phone,
+          accessToken,
+          refreshToken,
+          userDetails: passengerDetails || user,
+        };
+
+        return res
+          .status(200)
+          .json(new ApiResponse(200, msg, "OTP verified for rider"));
+      }
+    }
+
     const validationResponse = await validateOtpViaMessageCentral(
       phone,
       verificationId,
@@ -300,35 +376,37 @@ export const verifyOtp = asyncHandler(async (req, res) => {
       user._id
     );
 
+    // If the user is an admin, return the admin details
     if (user.isAdmin) {
       const adminDetails = await Admin.findOne({ phone });
-      return res.status(200).json(
-        new ApiResponse(
-          200,
-          {
-            role: "admin",
-            isVerified: user.isVerified,
-            isNewAdmin: !adminDetails,
-            phone: user.phone,
-            accessToken,
-            refreshToken,
-            userDetails: adminDetails || {
-              userId: user._id,
-              phone: user.phone,
-              isVerified: user.isVerified,
-              isDriver: user.isDriver,
-              isAdmin: user.isAdmin,
-              createdAt: user.createdAt,
-              updatedAt: user.updatedAt,
-            },
-          },
-          "OTP verified for admin"
-        )
-      );
+
+      const msg = {
+        role: "admin",
+        isVerified: user.isVerified,
+        isNewAdmin: !adminDetails, // New admin if no details found
+        phone: user.phone,
+        accessToken,
+        refreshToken,
+        userDetails: adminDetails || {
+          userId: user._id,
+          phone: user.phone,
+          isVerified: user.isVerified,
+          isDriver: user.isDriver,
+          isAdmin: user.isAdmin,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        }, // Send admin details if available
+      };
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, msg, "OTP verified for admin"));
     }
 
+    // If the user is a driver , return the driver details
     if (user.isDriver) {
       const driverDetails = await Driver.findOne({ phone });
+      // console.log(driverDetails);
       const msg = {
         role: "driver",
         isVerified: user.isVerified,
@@ -336,7 +414,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
         phone: user.phone,
         accessToken,
         refreshToken,
-        user: driverDetails || {
+        userDetails: driverDetails || {
           userId: user._id,
           phone: user.phone,
           isVerified: user.isVerified,
@@ -347,34 +425,42 @@ export const verifyOtp = asyncHandler(async (req, res) => {
           updatedAt: user.updatedAt,
         }, // Send driver details if available
       };
+
       return res
         .status(200)
         .json(new ApiResponse(200, msg, "OTP verified for driver"));
+    } else {
+      // If the user is a passenger (non-driver)
+      let passengerDetails = await Rider.findOne({ phone });
+
+      if (!passengerDetails) {
+        // Create a new rider profile if not found
+        passengerDetails = new Rider({
+          name: "Rider", // Default name, can be updated later
+          phone,
+          userId: user._id,
+          current_location: {
+            type: "Point",
+            coordinates: [0, 0], // Default coordinates, can be updated later
+          },
+        });
+
+        await passengerDetails.save();
+      }
+
+      const msg = {
+        role: "passenger",
+        isNewPassenger: !passengerDetails, // New passenger if no details found
+        phone: user.phone,
+        accessToken,
+        refreshToken,
+        userDetails: passengerDetails || user,
+      };
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, msg, "OTP verified for rider"));
     }
-
-    let passengerDetails = await Rider.findOne({ phone });
-    if (!passengerDetails) {
-      passengerDetails = new Rider({
-        name: "Rider",
-        phone,
-        userId: user._id,
-        current_location: { type: "Point", coordinates: [0, 0] },
-      });
-      await passengerDetails.save();
-    }
-
-    const msg = {
-      role: "passenger",
-      isNewPassenger: !passengerDetails, // New passenger if no details found
-      phone: user.phone,
-      accessToken,
-      refreshToken,
-      user: passengerDetails || user,
-    };
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, msg, "OTP verified for rider"));
   } catch (error) {
     console.error("Error validating OTP:", error.message);
     return res
