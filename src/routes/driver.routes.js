@@ -23,6 +23,7 @@ import {
   getTodaysEarnings,
   getApprovedStatus,
   getWalletBalance,
+  deleteDriverAccount,
 } from "../controllers/driver.controller.js";
 import { getETOCardById } from "../controllers/etoController.js";
 
@@ -55,5 +56,6 @@ router.route("/getTotalEarningByDate/:userId").post(getTotalEarningByDate);
 router.route("/getTodaysEarnings/:userId").get(getTodaysEarnings);
 router.route("/getWalletBalance/:userId").get(getWalletBalance);
 router.route("/:id").get(getDriverById);
+router.delete("/deleteAccount/:driverId", deleteDriverAccount);
 
 export default router;

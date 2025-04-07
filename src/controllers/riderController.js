@@ -3,7 +3,8 @@ import { Rider } from "../models/rider.model.js";
 import { RideDetails } from "../models/rideDetails.model.js";
 import ApiResponse from "../utils/apiResponse.js";
 import { Driver } from "../models/driver.model.js";
-import {ETOCard} from "../models/eto.model.js"
+import { ETOCard } from "../models/eto.model.js";
+import { User } from "../models/user.model.js";
 
 // Get All Riders Function
 export const getAllRiders = asyncHandler(async (req, res) => {
@@ -77,19 +78,34 @@ export const getCurrentRide = asyncHandler(async (req, res) => {
 
     if (!currentRide) {
       return res
-      .status(404)
-      .json(new ApiResponse(404, null, "Ride details not found"));
+        .status(404)
+        .json(new ApiResponse(404, null, "Ride details not found"));
     }
-    const driverUserDetails = await  Driver.findOne({ phone: currentRide?.driverNumber});
-    const etoDetails = await  ETOCard.findOne({ driverId: currentRide?.driverId});
-    
-    const rideAndDriverDetails={...currentRide.toObject(),driverUserDetails,etoDetails:{helpLine_num:etoDetails?.helpLine_num,eto_id_num:etoDetails?.eto_id_num}}
-    
+    const driverUserDetails = await Driver.findOne({
+      phone: currentRide?.driverNumber,
+    });
+    const etoDetails = await ETOCard.findOne({
+      driverId: currentRide?.driverId,
+    });
+
+    const rideAndDriverDetails = {
+      ...currentRide.toObject(),
+      driverUserDetails,
+      etoDetails: {
+        helpLine_num: etoDetails?.helpLine_num,
+        eto_id_num: etoDetails?.eto_id_num,
+      },
+    };
+
     // console.log("Rider Current Ride", currentRide);
     return res
       .status(200)
       .json(
-        new ApiResponse(200, rideAndDriverDetails, "Current ride retrieved successfully")
+        new ApiResponse(
+          200,
+          rideAndDriverDetails,
+          "Current ride retrieved successfully"
+        )
       );
   } catch (error) {
     console.error("Error retrieving current ride:", error.message);
@@ -203,5 +219,51 @@ export const updateRiderProfile = asyncHandler(async (req, res) => {
     return res
       .status(500)
       .json(new ApiResponse(500, null, "Failed to update rider profile"));
+  }
+});
+
+// Delete Rider Account Function
+export const deleteRiderAccount = asyncHandler(async (req, res) => {
+  const { id } = req.params; // Rider ID
+
+  if (!id) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Rider ID is required"));
+  }
+
+  try {
+    // Step 1: Find the rider
+    const rider = await Rider.findById(id);
+    if (!rider) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Rider not found"));
+    }
+
+    const userId = rider.userId;
+
+    // Step 2: Delete the Rider
+    await Rider.findByIdAndDelete(id);
+
+    // Step 3: Delete the corresponding User
+    if (userId) {
+      await User.findByIdAndDelete(userId);
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          null,
+          "Account deleted successfully"
+        )
+      );
+  } catch (error) {
+    console.error("Error deleting account:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to delete account"));
   }
 });

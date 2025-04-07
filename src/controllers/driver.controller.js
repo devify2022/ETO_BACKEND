@@ -772,7 +772,6 @@ export const getWalletBalance = asyncHandler(async (req, res) => {
   }
 });
 
-
 export const getTotalWithdrawalsByDate = asyncHandler(async (req, res) => {
   const { driverId, fromDate, toDate } = req.body;
   try {
@@ -1113,5 +1112,53 @@ export const approveDriverByDriverId = asyncHandler(async (req, res) => {
       .json(
         new ApiResponse(500, null, "Failed to approve driver or create Khata")
       );
+  }
+});
+
+// Delete Driver, User, and ETOCard
+export const deleteDriverAccount = asyncHandler(async (req, res) => {
+  const { driverId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(driverId)) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Invalid driver ID"));
+  }
+
+  try {
+    const driver = await Driver.findById(driverId);
+
+    if (!driver) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Driver not found"));
+    }
+
+    // Get the associated userId
+    const userId = driver.userId;
+
+    // Delete ETOCard
+    await ETOCard.findOneAndDelete({ driverId });
+
+    // Delete Driver
+    await Driver.findByIdAndDelete(driverId);
+
+    // Delete User
+    await User.findByIdAndDelete(userId);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          null,
+          "Account deleted successfully"
+        )
+      );
+  } catch (error) {
+    console.error("Error deleting driver account:", error.message);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to delete driver account"));
   }
 });

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  deleteRiderAccount,
   getAllRiders,
   getCurrentRide,
   getRiderById,
@@ -16,5 +17,6 @@ router.get("/currentRide/:id", getCurrentRide);
 router.route("/rideDetails/:id").get(getRiderRideById);
 router.route("/update/:id").patch(updateRiderProfile);
 router.get("/rideHistory/:id", getRiderRideHistory);
+router.delete("/delete/:id", deleteRiderAccount);
 
 export default router;
