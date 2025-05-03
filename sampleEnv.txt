@@ -1,4 +1,5 @@
 PORT = 8000
+# MONGODB_URI=mongodb+srv://eto:3GdzaxKt7TiedcIl@cluster0.ma5ez.mongodb.net/eto
 MONGODB_URI=mongodb+srv://eto:RXwqbreD1Sem2oAf@cluster0.m799yqm.mongodb.net/eto
 CORS_ORIGIN =*
 ACCESS_TOKEN_SECRET = ETO_BACKEND

@@ -142,6 +142,10 @@ const driverSchema = new Schema(
       type: Schema.Types.ObjectId, // Assuming it's an ObjectId
       ref: "RideDetails",
     },
+    total_completed_km: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
