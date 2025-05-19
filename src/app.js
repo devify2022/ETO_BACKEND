@@ -17,7 +17,7 @@ const io = setupSocketIO(server); // Use the same server for Socket.IO
 // Middleware configuration
 app.use(
   cors({
-    origin: ["*"], // Allows requests from any origin
+    origin: "*", // Allows requests from any origin
     credentials: true, // Allows cookies to be sent across domains
   })
 );
