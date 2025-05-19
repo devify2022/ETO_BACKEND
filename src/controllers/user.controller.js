@@ -58,6 +58,14 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
   } else if (isAdmin) {
     userDetails = await Admin.findOne({ phone });
     role = "admin";
+    // ADD THIS CHECK:
+    if (!userDetails) {
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(400, null, "Phone number is not registered as admin")
+        );
+    }
   } else {
     userDetails = await Rider.findOne({ phone });
     role = "passenger";
@@ -160,6 +168,36 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
     }
   } else {
     // Handle new user registration
+
+    // ADD THIS BLOCK:
+    if (isDriver) {
+      const driver = await Driver.findOne({ phone });
+      if (!driver) {
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              null,
+              "Phone number is not registered as driver"
+            )
+          );
+      }
+    }
+    if (isAdmin) {
+      const admin = await Admin.findOne({ phone });
+      if (!admin) {
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              null,
+              "Phone number is not registered as admin"
+            )
+          );
+      }
+    }
     if (user) {
       user.isVerified = false;
       await user.save();
