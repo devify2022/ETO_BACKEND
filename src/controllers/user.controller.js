@@ -202,7 +202,7 @@ export const loginAndSendOtp = asyncHandler(async (req, res) => {
       user.isVerified = false;
       await user.save();
     } else {
-      // Create a new user
+      // Create a new user 2
       user = new User({
         phone,
         isVerified: false,
