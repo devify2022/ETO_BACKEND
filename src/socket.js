@@ -25,7 +25,14 @@ export const setupSocketIO = (server) => {
       }
 
       try {
-        await Admin.findByIdAndUpdate(adminId, { socketId: socket.id });
+        const admin = await Admin.findById(adminId);
+        if (!admin) {
+          return socket.emit("error", { message: "Admin not found" });
+        }
+
+        admin.socketId = socket.id;
+        await admin.save();
+
         console.log(`Admin ${adminId} connected with socket ${socket.id}`);
         socket.emit("adminRegistered", {
           success: true,
@@ -491,6 +498,54 @@ export const setupSocketIO = (server) => {
           success: false,
           message: "Failed to get driver location",
         });
+      }
+    });
+
+    // Emergency Notification Event
+    socket.on("emergencyAlert", async (data) => {
+      // data: { userType: "rider" | "driver", userId, location: { lat, lng } }
+      const { userType, userId, location } = data;
+      if (!userType || !userId || !location) {
+        return socket.emit("error", { message: "Missing emergency data" });
+      }
+
+      try {
+        let userDetails = null;
+        if (userType === "rider") {
+          userDetails = await Rider.findById(userId);
+        } else if (userType === "driver") {
+          userDetails = await Driver.findById(userId);
+        }
+        if (!userDetails) {
+          return socket.emit("error", { message: "User not found" });
+        }
+
+        // Find the only admin
+        const admin = await Admin.findOne({ socketId: { $ne: null } });
+        if (!admin || !admin.socketId) {
+          return socket.emit("error", { message: "Admin not online" });
+        }
+
+        // Prepare emergency data
+        const emergencyData = {
+          userType,
+          userId,
+          name: userDetails.name,
+          phone: userDetails.phone,
+          location,
+          message: `Emergency alert from ${userType}`,
+        };
+
+        // Notify the admin
+        socket.to(admin.socketId).emit("emergencyNotification", emergencyData);
+
+        socket.emit("emergencySent", {
+          success: true,
+          message: "Emergency alert sent to admin",
+        });
+      } catch (error) {
+        console.error("Error in emergencyAlert:", error.message);
+        socket.emit("error", { message: "Failed to send emergency alert" });
       }
     });
 
