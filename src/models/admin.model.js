@@ -24,6 +24,10 @@ const adminSchema = new Schema(
       ref: "User",
       required: [true, "User ID is required"],
     },
+    socketId: {
+      type: String,
+      default: null,
+    },
     total_earning: {
       type: Number,
       default: 0,

@@ -782,22 +782,68 @@ export const updatePaymentMode = (io) =>
 // API to get all active rides
 export const getAllActiveRides = asyncHandler(async (req, res) => {
   try {
-    // Fetch all rides where isOn is true
-    const activeRides = await RideDetails.find({ isOn: true });
+    // Fetch all rides where isOn is true and populate driver and rider details
+    const activeRides = await RideDetails.find({ isOn: true })
+      .populate({
+        path: "driverId",
+        select: "name phone photo current_location", // Include current_location
+      })
+      .populate({
+        path: "riderId",
+        select: "name phone photo current_location",
+      });
 
-    // Return the list of active rides or an empty array if none are found
+    // Format the response to include driver location
+    const ridesWithLocations = activeRides.map((ride) => ({
+      rideId: ride._id,
+      driver: ride.driverId
+        ? {
+            id: ride.driverId._id,
+            name: ride.driverId.name,
+            phone: ride.driverId.phone,
+            photo: ride.driverId.photo,
+            current_location: ride.driverId.current_location,
+          }
+        : null,
+      rider: ride.riderId
+        ? {
+            id: ride.riderId._id,
+            name: ride.riderId.name,
+            phone: ride.riderId.phone,
+            photo: ride.riderId.photo,
+            current_location: ride.riderId.current_location,
+          }
+        : null,
+      pickup_location: ride.pickup_location,
+      drop_location: ride.drop_location,
+      isOn: ride.isOn,
+      isRide_started: ride.isRide_started,
+      isRide_ended: ride.isRide_ended,
+      started_time: ride.started_time,
+      ride_end_time: ride.ride_end_time,
+      total_km: ride.total_km,
+      total_amount: ride.total_amount,
+      driver_profit: ride.driver_profit,
+      admin_profit: ride.admin_profit,
+      payment_mode: ride.payment_mode,
+      isPickUp_verify: ride.isPickUp_verify,
+      isDrop_verify: ride.isDrop_verify,
+      ispayment_done: ride.isPayment_done,
+      // Add more ride fields as needed
+    }));
+
     return res.status(200).json({
       message:
-        activeRides.length > 0
+        ridesWithLocations.length > 0
           ? "Active rides retrieved successfully."
           : "No active rides found.",
-      data: activeRides, // Will be an array, either with rides or empty
+      data: ridesWithLocations,
     });
   } catch (error) {
     console.error("Error fetching active rides:", error.message);
     return res.status(500).json({
       message: "Failed to retrieve active rides.",
-      data: [], // Return an empty array in case of an error
+      data: [],
     });
   }
 });

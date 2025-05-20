@@ -3,6 +3,7 @@ import { Driver } from "./models/driver.model.js";
 import { Rider } from "./models/rider.model.js";
 import { RideDetails } from "./models/rideDetails.model.js";
 import geolib from "geolib";
+import { Admin } from "./models/admin.model.js";
 // import { getEstimatedTime } from "./utils/getlocation.js";
 
 export const setupSocketIO = (server) => {
@@ -15,6 +16,26 @@ export const setupSocketIO = (server) => {
 
   io.on("connection", (socket) => {
     // console.log("A user connected:", socket.id);
+
+    // Register Admin Socket ID
+    socket.on("registerAdmin", async (data) => {
+      const { adminId } = data;
+      if (!adminId) {
+        return socket.emit("error", { message: "Admin ID is required" });
+      }
+
+      try {
+        await Admin.findByIdAndUpdate(adminId, { socketId: socket.id });
+        console.log(`Admin ${adminId} connected with socket ${socket.id}`);
+        socket.emit("adminRegistered", {
+          success: true,
+          message: "Admin registered successfully",
+        });
+      } catch (error) {
+        console.error("Error registering admin:", error.message);
+        socket.emit("error", { message: "Failed to register admin" });
+      }
+    });
 
     // Register Driver Socket ID with location update and isActive check
     socket.on("registerDriver", async (data) => {
@@ -335,59 +356,6 @@ export const setupSocketIO = (server) => {
       }
     });
 
-    // On socket "send_location" event=============================================================
-    // socket.on("send_location", async (locationData) => {
-    //   const { rideId, driverLocation } = locationData;
-    //   console.log("Location Data", locationData);
-
-    //   try {
-    //     // Fetch the ride details from the database using rideId
-    //     const rideDetails = await RideDetails.findById(rideId);
-    //     if (!rideDetails) {
-    //       socket.emit("error", { message: "Ride not found" });
-    //       return;
-    //     }
-
-    //     // Fetch the rider details using riderId from rideDetails
-    //     const rider = await Rider.findById(rideDetails.riderId);
-    //     if (!rider) {
-    //       socket.emit("error", { message: "Rider not found" });
-    //       return;
-    //     }
-
-    //     const riderSocketId = rider.socketId; // Assuming the rider model stores the socketId
-
-    //     // Extract the drop location from the ride details
-    //     const dropLocation = {
-    //       lat: rideDetails.drop_location.coordinates[1], // Correct order: latitude first
-    //       lng: rideDetails.drop_location.coordinates[0], // longitude second
-    //     };
-
-    //     // Format driver's location for API
-    //     const formattedDriverLocation = {
-    //       lat: driverLocation.latitude,
-    //       lng: driverLocation.longitude,
-    //     };
-
-    //     // Calculate the estimated time from the driver's current location to the drop location
-    //     const estimatedTimeToDrop = await getEstimatedTime(
-    //       formattedDriverLocation,
-    //       dropLocation
-    //     );
-
-    //     // Emit the updated data to the rider's socket
-    //     io.to(riderSocketId).emit("estimatedTimeToDrop", {
-    //       estimatedTimeToDrop,
-    //       message: "Estimated time to drop updated",
-    //     });
-    //   } catch (error) {
-    //     console.error("Error calculating estimated time:", error.message);
-    //     socket.emit("error", { message: "Unable to calculate estimated time" });
-    //   }
-    // });
-
-    //=============================================================
-
     // On socket "send_location" event
     socket.on("send_location", async (locationData) => {
       const { rideId, driverLocation } = locationData;
@@ -446,7 +414,7 @@ export const setupSocketIO = (server) => {
 
         // Calculate the estimated time in hours
         const estimatedTimeToDropHours = driverToDropDistanceKm / averageSpeed;
- 
+
         // Convert hours to minutes
         const estimatedTimeToDropMinutes = estimatedTimeToDropHours * 60;
 
@@ -466,6 +434,66 @@ export const setupSocketIO = (server) => {
       }
     });
 
+    // Admin requests driver's current location by rideId
+    socket.on("getDriverLocationByRideId", async (data) => {
+      const { rideId, adminId } = data;
+      if (!rideId || !adminId) {
+        return socket.emit("driverLocationForAdmin", {
+          success: false,
+          message: "Ride ID and Admin ID are required",
+        });
+      }
+
+      try {
+        // 1. Find the ride and check if isOn is true
+        const ride = await RideDetails.findById(rideId);
+        if (!ride || !ride.isOn) {
+          return socket.emit("driverLocationForAdmin", {
+            success: false,
+            message: "Active ride not found",
+            rideId,
+          });
+        }
+
+        // 2. Find the driver by driverId
+        const driver = await Driver.findById(ride.driverId);
+        if (!driver || !driver.current_location) {
+          return socket.emit("driverLocationForAdmin", {
+            success: false,
+            message: "Driver or location not found",
+            rideId,
+          });
+        }
+
+        // 3. Find the admin's socketId
+        const admin = await Admin.findById(adminId);
+        // if (!admin || !admin.socketId) {
+        //   return socket.emit("driverLocationForAdmin", {
+        //     success: false,
+        //     message: "Admin socket not found",
+        //     rideId,
+        //   });
+        // }
+
+        // 4. Emit driver's current location to the admin's socket
+        io.to(admin.socketId).emit("driverLocationForAdmin", {
+          success: true,
+          rideId,
+          driverId: driver._id,
+          location: driver.current_location,
+        });
+      } catch (error) {
+        console.error(
+          "Error fetching driver location for admin:",
+          error.message
+        );
+        socket.emit("driverLocationForAdmin", {
+          success: false,
+          message: "Failed to get driver location",
+        });
+      }
+    });
+
     // Handle disconnect
     socket.on("disconnect", async () => {
       console.log(`Socket ${socket.id} disconnected`);
@@ -474,7 +502,7 @@ export const setupSocketIO = (server) => {
         // Find the driver by socketId and remove the socketId when disconnected
         await Driver.findOneAndUpdate(
           { socketId: socket.id },
-          { socketId: null ,isActive:false}
+          { socketId: null, isActive: false }
         );
         console.log(`Driver with socket ${socket.id} disconnected`);
       } catch (error) {
