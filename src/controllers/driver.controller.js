@@ -511,10 +511,10 @@ export const getAllActiveDrivers = asyncHandler(async (req, res) => {
     // Check if no active drivers are found
     if (!activeDrivers || activeDrivers.length === 0) {
       return res
-        .status(404)
+        .status(200)
         .json(
           new ApiResponse(
-            404,
+            200,
             { total: 0, drivers: [] },
             "No active drivers found"
           )
@@ -1069,8 +1069,8 @@ export const getUnapprovedDrivers = asyncHandler(async (req, res) => {
 
     if (unapprovedDrivers.length === 0) {
       return res
-        .status(404)
-        .json(new ApiResponse(404, null, "No unapproved drivers found"));
+        .status(200)
+        .json(new ApiResponse(200, null, "No unapproved drivers found"));
     }
 
     return res.status(200).json(
