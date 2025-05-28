@@ -68,8 +68,8 @@ export const getAllPendingDueRequests = asyncHandler(async (req, res) => {
 
     if (dueRequests.length === 0) {
       return res
-        .status(404)
-        .json(new ApiResponse(404, null, "No pending due requests found"));
+        .status(200)
+        .json(new ApiResponse(200, null, "No pending due requests found"));
     }
 
     // Format response with additional details for each request
