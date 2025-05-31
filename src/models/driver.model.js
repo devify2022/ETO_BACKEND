@@ -37,6 +37,10 @@ const driverSchema = new Schema(
       type: String,
       default: null,
     },
+    lastSeen: {
+      type: Date,
+      default: Date.now,
+    },
     due_wallet: {
       type: Number,
       default: 0,

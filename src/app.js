@@ -13,20 +13,17 @@ const server = http.createServer(app);
 // Initialize Socket.IO by passing the server
 const io = setupSocketIO(server); // Use the same server for Socket.IO
 
+const orginStatus = {
+  development: [
+    "http://localhost:8081", // your local frontend (if needed)
+    "http://192.168.1.5:8081", // allow your LAN frontend
+    "http://192.168.1.5", // allow without port if needed
+    "*", // (optional) allow all, but not recommended for production
+  ],
+};
+
 // Middleware configuration
-app.use(
-  cors({
-    origin: [
-      "http://localhost:3000",
-      "http://192.168.1.5:3000",
-      "http://192.168.1.5",
-      "http://localhost:8081",
-      "http://192.168.1.5:8081",
-      "*", // (optional) allow all, but not recommended for production
-    ], // Allows requests from any origin
-    credentials: true, // Allows cookies to be sent across domains
-  })
-);
+app.use(cors());
 
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
