@@ -4,12 +4,19 @@ import { Rider } from "./models/rider.model.js";
 import { RideDetails } from "./models/rideDetails.model.js";
 import geolib from "geolib";
 import { Admin } from "./models/admin.model.js";
+import { PendingRideRequest } from "./models/pendingRequest.model.js";
+import sendDriverNotification from "./utils/onesignal.js";
 // import { getEstimatedTime } from "./utils/getlocation.js";
 
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: "*", // Set your React app origin
+      origin: [
+        "http://localhost:8081", // your local frontend (if needed)
+        "http://192.168.1.5:8081", // allow your LAN frontend
+        "http://192.168.1.5", // allow without port if needed
+        "*", // (optional) allow all, but not recommended for production
+      ], // Set your React app origin
       credentials: true,
     },
   });
@@ -46,7 +53,6 @@ export const setupSocketIO = (server) => {
 
     // Register Driver Socket ID with location update and isActive check
     socket.on("registerDriver", async (data) => {
-      // console.log(data)
       const { driverId, lat, lng } = data;
       if (!driverId || !lat || !lng) {
         return socket.emit("error", {
@@ -60,19 +66,8 @@ export const setupSocketIO = (server) => {
           return socket.emit("error", { message: "Driver not found" });
         }
 
-        // console.log(`Emitting location to driver socket: ${driver.socketId}`);
-        io.to(driver.socketId).emit("driverLocation", {
-          driverId,
-          location: { lat, lng },
-          message: "Driver's location updated",
-        });
-
-        const ride = await RideDetails.findOne({
-          driverId,
-          isRide_started: true,
-        });
-
         if (driver.isActive) {
+          // Update driver's socketId and location
           await Driver.findByIdAndUpdate(driverId, {
             socketId: socket.id,
             current_location: {
@@ -85,9 +80,16 @@ export const setupSocketIO = (server) => {
             `Driver ${driverId} connected with socket ${socket.id} and location updated`
           );
 
-          // Emit driver's updated location to the rider (if a ride is ongoing)
+          // Deliver any pending ride requests that are not expired
+          const pendingRequests = await PendingRideRequest.find({
+            driverId: driverId,
+            expiresAt: { $gt: new Date() },
+          });
+          for (const req of pendingRequests) {
+            io.to(socket.id).emit("rideRequest", req.data);
+            await PendingRideRequest.findByIdAndDelete(req._id); // Remove after sending
+          }
         } else {
-          // console.log(`Driver ${driverId} is not active, location not updated`);
           return socket.emit("error", {
             message: "Driver is not active, cannot update location",
           });
@@ -152,7 +154,6 @@ export const setupSocketIO = (server) => {
       }
     });
 
-    // Handle driver selection
     // Handle driver selection with details
     socket.on("selectDriverWithDetails", async (rideDetails) => {
       const {
@@ -167,21 +168,51 @@ export const setupSocketIO = (server) => {
       } = rideDetails;
 
       try {
-        // Fetch driver and check if they are available to accept the ride
         const driver = await Driver.findById(driverId);
-        if (driver && driver.isActive && !driver.is_on_ride) {
-          // console.log("Emiting send request", driver.socketId);
-          io.to(driver.socketId).emit("rideRequest", {
-            riderId,
-            pickUpLocation,
-            dropLocation,
-            totalKmPickupToDrop,
-            totalPrice,
-            distanceToPickup,
-            estimatedTimeToPickup,
-          });
+        const rider = await Rider.findById(riderId);
 
-          // Confirm selection to the rider
+        if (driver && driver.isActive && !driver.is_on_ride) {
+          if (driver.socketId) {
+            // Driver is online, send ride request via socket
+            io.to(driver.socketId).emit("rideRequest", {
+              riderId,
+              pickUpLocation,
+              dropLocation,
+              totalKmPickupToDrop,
+              totalPrice,
+              distanceToPickup,
+              estimatedTimeToPickup,
+            });
+
+            sendDriverNotification(
+              driverId,
+              "New Ride Request",
+              "You have a new ride request. Tap to open the app."
+            );
+          } else {
+            // Driver is offline, store pending request and send push notification
+            await PendingRideRequest.create({
+              driverId,
+              riderSocketId: rider?.socketId || "",
+              data: {
+                riderId,
+                pickUpLocation,
+                dropLocation,
+                totalKmPickupToDrop,
+                totalPrice,
+                distanceToPickup,
+                estimatedTimeToPickup,
+              },
+              expiresAt: new Date(Date.now() + 30 * 1000), // 30 seconds from now
+            });
+            // sendPushNotificationToDriver
+            sendDriverNotification(
+              driverId,
+              "New Ride Request",
+              "You have a new ride request. Tap to open the app."
+            );
+          }
+
           socket.emit("driverSelected", {
             success: true,
             message: "Driver selected successfully",
@@ -557,7 +588,7 @@ export const setupSocketIO = (server) => {
         // Find the driver by socketId and remove the socketId when disconnected
         await Driver.findOneAndUpdate(
           { socketId: socket.id },
-          { socketId: null, isActive: false }
+          { socketId: null }
         );
         console.log(`Driver with socket ${socket.id} disconnected`);
       } catch (error) {
@@ -570,6 +601,25 @@ export const setupSocketIO = (server) => {
       callback({ result: arg1 + arg2 });
     });
   });
+
+  setInterval(async () => {
+    const now = new Date();
+    const expiredRequests = await PendingRideRequest.find({
+      expiresAt: { $lte: now },
+    });
+
+    for (const req of expiredRequests) {
+      // Notify the rider that the driver did not respond
+      if (req.riderSocketId) {
+        io.to(req.riderSocketId).emit("driverNoResponse", {
+          message: "Driver did not respond to your ride request.",
+          driverId: req.driverId,
+        });
+      }
+      // Delete the pending request
+      await PendingRideRequest.findByIdAndDelete(req._id);
+    }
+  }, 5000); // Check every 5 seconds
 
   return io;
 };

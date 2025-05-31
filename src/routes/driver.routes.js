@@ -24,6 +24,7 @@ import {
   getApprovedStatus,
   getWalletBalance,
   deleteDriverAccount,
+  updateOneSignalPlayerId,
 } from "../controllers/driver.controller.js";
 import { getETOCardById } from "../controllers/etoController.js";
 
@@ -31,6 +32,7 @@ const router = Router();
 
 // Place the more specific routes before the dynamic ones
 router.route("/createDriver").post(createDriver);
+router.route("/updatePlayerId").post(updateOneSignalPlayerId);
 router.route("/createWithdrawlLogs").post(createWithdrawalLogs);
 router.route("/active").get(getAllActiveDrivers);
 router.route("/registered-time/:id").get(getDriverRegistrationTimeById);

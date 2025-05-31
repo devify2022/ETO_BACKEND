@@ -33,6 +33,10 @@ const driverSchema = new Schema(
       type: String, // To store driver's current socketId
       default: null,
     },
+    oneSignalPlayerId: {
+      type: String,
+      default: null,
+    },
     due_wallet: {
       type: Number,
       default: 0,

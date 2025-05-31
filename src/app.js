@@ -2,7 +2,6 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import errorHandler from "./middlewares/errorMiddleware.js";
-import rateLimitMiddleware from "./middlewares/rateLimitMiddleware.js";
 import { setupSocketIO } from "./socket.js"; // Import the Socket.IO setup
 
 // Initialize Express app
@@ -17,11 +16,17 @@ const io = setupSocketIO(server); // Use the same server for Socket.IO
 // Middleware configuration
 app.use(
   cors({
-    origin: "*", // Allows requests from any origin
+    origin: [
+      "http://localhost:3000",
+      "http://192.168.1.5:3000",
+      "http://192.168.1.5",
+      "http://localhost:8081",
+      "http://192.168.1.5:8081",
+      "*", // (optional) allow all, but not recommended for production
+    ], // Allows requests from any origin
     credentials: true, // Allows cookies to be sent across domains
   })
 );
-
 
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));

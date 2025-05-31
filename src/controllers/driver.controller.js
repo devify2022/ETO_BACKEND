@@ -249,7 +249,9 @@ export const getDriverById = asyncHandler(async (req, res) => {
 
     return res
       .status(200)
-      .json(new ApiResponse(200, responseData, "Driver retrieved successfully"));
+      .json(
+        new ApiResponse(200, responseData, "Driver retrieved successfully")
+      );
   } catch (error) {
     console.error("Error retrieving driver:", error.message);
     return res
@@ -1248,5 +1250,54 @@ export const deleteDriverAccount = asyncHandler(async (req, res) => {
     return res
       .status(500)
       .json(new ApiResponse(500, null, "Failed to delete driver account"));
+  }
+});
+
+// Update OneSignal Player ID for Driver
+export const updateOneSignalPlayerId = asyncHandler(async (req, res) => {
+  const { driverId, oneSignalPlayerId } = req.body;
+
+  console.log("Updating OneSignal Player ID for Driver:", {
+    driverId,
+    oneSignalPlayerId,
+  });
+
+  if (!driverId || !oneSignalPlayerId) {
+    return res
+      .status(400)
+      .json({
+        success: false,
+        message: "Driver ID and OneSignal Player ID are required.",
+      });
+  }
+
+  try {
+    const driver = await Driver.findByIdAndUpdate(
+      driverId,
+      { oneSignalPlayerId },
+      { new: true }
+    );
+
+    if (!driver) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Driver not found." });
+    }
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "OneSignal Player ID updated successfully.",
+        driver,
+      });
+  } catch (error) {
+    console.error("Error updating OneSignal Player ID:", error.message);
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to update OneSignal Player ID.",
+      });
   }
 });

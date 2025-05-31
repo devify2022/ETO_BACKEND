@@ -342,9 +342,11 @@ export const rejectRide = (io) =>
           .json(new ApiResponse(404, null, "Driver not found"));
       }
 
+      console.log("Emitting rideRejected to", rider.socketId);
+
       // Notify the rider via socket if they have a socket ID
-      if (rider.socketId) {
-        io.to(rider.socketId).emit("rideRejected", {
+      if (rider) {
+        io.to(rider.socketId).emit("rideReject", {
           isBooked: false,
           message: "Your ride request has been rejected by the driver",
         });
