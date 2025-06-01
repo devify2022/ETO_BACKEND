@@ -35,236 +35,175 @@ const generateAccessAndRefreshToken = async (userId) => {
   }
 };
 
-// Login User Function
 export const loginAndSendOtp = asyncHandler(async (req, res) => {
   const { phone, isDriver, isAdmin } = req.body;
 
-  // Validate input
   if (!phone) {
     return res
       .status(400)
       .json(new ApiResponse(400, null, "Phone number is required"));
   }
 
-  let role = null;
-  let userDetails = null;
+  let user = await User.findOne({ phone });
+  let driverDetails = null;
+  let role = "passenger";
   let otpResponse = null;
   let otpCredentials = null;
 
-  // Determine role and find existing user details (Driver, Passenger, or Admin)
-  if (isDriver) {
-    userDetails = await Driver.findOne({ phone });
-    role = "driver";
-  } else if (isAdmin) {
-    userDetails = await Admin.findOne({ phone });
+  // --- ADMIN LOGIC: Only one admin allowed ---
+  if (isAdmin) {
     role = "admin";
-    // ADD THIS CHECK:
-    if (!userDetails) {
+    // Check if any admin already exists (other than this user)
+    const existingAdmin = await User.findOne({ isAdmin: true });
+    if (
+      existingAdmin &&
+      (!user || user._id.toString() !== existingAdmin._id.toString())
+    ) {
       return res
         .status(400)
         .json(
-          new ApiResponse(400, null, "Phone number is not registered as admin")
+          new ApiResponse(
+            400,
+            null,
+            "An admin already exists. Only one admin is allowed."
+          )
         );
     }
-  } else {
-    userDetails = await Rider.findOne({ phone });
-    role = "passenger";
-  }
-
-  let user = await User.findOne({ phone });
-
-  if (
-    user &&
-    ((user.isAdmin && !isAdmin) ||
-      (user.isDriver && !isDriver) ||
-      (role === "passenger" && (user.isAdmin || user.isDriver)))
-  ) {
-    return res
-      .status(400)
-      .json(
-        new ApiResponse(
-          400,
-          null,
-          "Phone number already exists as another role"
-        )
-      );
-  }
-
-  if (!userDetails && user?.isDriver) {
-    user = null;
-    await User.findOneAndDelete({ phone });
-  }
-
-  if (userDetails) {
     if (!user) {
-      return res.status(404).json(new ApiResponse(404, null, "User not found"));
-    }
-
-    // Generate access and refresh tokens
-    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-      user._id
-    );
-
-    // Reset the isVerified flag
-    user.isVerified = false;
-    await user.save();
-
-    try {
-      // Send OTP via Message Central
-      otpResponse = await sendOtpViaMessageCentral(phone);
-
-      // Handle response for OTP service
-      if (otpResponse) {
-        // If response is a string, try to parse it
-        if (typeof otpResponse === "string") {
-          try {
-            otpCredentials = JSON.parse(otpResponse);
-          } catch (error) {
-            console.error("Error parsing OTP response:", error.message);
-            return res
-              .status(500)
-              .json(new ApiResponse(500, null, "Error parsing OTP response"));
-          }
-        } else {
-          otpCredentials = otpResponse; // Use directly if it's already an object
-        }
-
-        // Check if the OTP request was successful
-        if (otpResponse?.responseCode !== 200) {
-          return res
-            .status(400)
-            .json(
-              new ApiResponse(
-                400,
-                otpResponse,
-                `OTP request failed: ${otpResponse.message || "Unknown error"}`
-              )
-            );
-        }
-
-        const data = {
-          role,
-          accessToken,
-          refreshToken,
-          userDetails: userDetails || {}, // Send user details if available
-          otpdata: otpCredentials.data,
-        };
-
-        console.log(otpCredentials);
-
-        return res
-          .status(200)
-          .json(new ApiResponse(200, data, "Logged in successfully, OTP sent"));
-      } else {
-        return res
-          .status(500)
-          .json(new ApiResponse(500, null, "No response from OTP service"));
-      }
-    } catch (error) {
-      console.error("Error sending OTP:", error.message);
-      return res
-        .status(500)
-        .json(new ApiResponse(500, null, "Failed to send OTP"));
-    }
-  } else {
-    // Handle new user registration
-
-    // ADD THIS BLOCK:
-    if (isDriver) {
-      const driver = await Driver.findOne({ phone });
-      if (!driver) {
-        return res
-          .status(400)
-          .json(
-            new ApiResponse(
-              400,
-              null,
-              "Phone number is not registered as driver"
-            )
-          );
-      }
-    }
-    if (isAdmin) {
-      const admin = await Admin.findOne({ phone });
-      if (!admin) {
-        return res
-          .status(400)
-          .json(
-            new ApiResponse(
-              400,
-              null,
-              "Phone number is not registered as admin"
-            )
-          );
-      }
-    }
-    if (user) {
-      user.isVerified = false;
-      await user.save();
-    } else {
-      // Create a new user 2
       user = new User({
         phone,
         isVerified: false,
-        isDriver,
-        isAdmin, // Set isAdmin flag based on the request
+        isDriver: false,
+        isAdmin: true,
       });
-
       await user.save();
     }
+    if (user && !user.isAdmin) {
+      let existingRole = user.isDriver ? "driver" : "passenger";
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            null,
+            `Phone number already exists as ${existingRole}`
+          )
+        );
+    }
+    // Continue with OTP logic as below...
+  }
+  // --- DRIVER LOGIC ---
+  else if (isDriver) {
+    role = "driver";
+    if (!user) {
+      user = new User({
+        phone,
+        isVerified: false,
+        isDriver: true,
+        isAdmin: false,
+      });
+      await user.save();
+    }
+    if (user && !user.isDriver) {
+      let existingRole = user.isAdmin ? "admin" : "passenger";
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            null,
+            `Phone number already exists as ${existingRole}`
+          )
+        );
+    }
+    driverDetails = await Driver.findOne({ phone });
+    // Continue with OTP logic as below...
+  }
+  // --- PASSENGER LOGIC ---
+  else {
+    role = "passenger";
+    if (!user) {
+      user = new User({
+        phone,
+        isVerified: false,
+        isDriver: false,
+        isAdmin: false,
+      });
+      await user.save();
+    }
+    if (user && (user.isDriver || user.isAdmin)) {
+      let existingRole = user.isAdmin
+        ? "admin"
+        : user.isDriver
+          ? "driver"
+          : "passenger";
+      return res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            null,
+            `Phone number already exists as ${existingRole}`
+          )
+        );
+    }
+    // Continue with OTP logic as below...
+  }
 
-    try {
-      // Send OTP via Message Central
-      otpResponse = await sendOtpViaMessageCentral(phone);
+  // --- OTP LOGIC (common for all roles) ---
+  user.isVerified = false;
+  await user.save();
 
-      // Handle response for OTP service
-      if (otpResponse) {
-        // If response is a string, try to parse it
-        if (typeof otpResponse === "string") {
-          try {
-            otpCredentials = JSON.parse(otpResponse);
-          } catch (error) {
-            console.error("Error parsing OTP response:", error.message);
-            return res
-              .status(500)
-              .json(new ApiResponse(500, null, "Error parsing OTP response"));
-          }
-        } else {
-          otpCredentials = otpResponse; // Use directly if it's already an object
-        }
+  try {
+    otpResponse = await sendOtpViaMessageCentral(phone);
 
-        // Check if the OTP request was successful
-        if (otpResponse?.responseCode !== 200) {
+    if (otpResponse) {
+      if (typeof otpResponse === "string") {
+        try {
+          otpCredentials = JSON.parse(otpResponse);
+        } catch (error) {
           return res
-            .status(400)
-            .json(
-              new ApiResponse(
-                400,
-                otpResponse,
-                `OTP request failed: ${otpResponse.message || "Unknown error"}`
-              )
-            );
+            .status(500)
+            .json(new ApiResponse(500, null, "Error parsing OTP response"));
         }
-
-        const newData = {
-          user,
-          otpdata: otpCredentials.data,
-        };
-
-        return res
-          .status(200)
-          .json(new ApiResponse(200, newData, "OTP sent successfully"));
       } else {
-        return res
-          .status(500)
-          .json(new ApiResponse(500, null, "No response from OTP service"));
+        otpCredentials = otpResponse;
       }
-    } catch (error) {
-      console.error("Error sending OTP:", error.message);
+
+      if (otpResponse?.responseCode !== 200) {
+        return res
+          .status(400)
+          .json(
+            new ApiResponse(
+              400,
+              otpResponse,
+              `OTP request failed: ${otpResponse.message || "Unknown error"}`
+            )
+          );
+      }
+
+      let data = {
+        role,
+        userDetails: driverDetails || user,
+        otpdata: otpCredentials.data,
+      };
+
+      if (isDriver && driverDetails) {
+        data.userDetails = driverDetails;
+      }
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, data, "OTP sent successfully"));
+    } else {
       return res
         .status(500)
-        .json(new ApiResponse(500, null, "Failed to send OTP"));
+        .json(new ApiResponse(500, null, "No response from OTP service"));
     }
+  } catch (error) {
+    return res
+      .status(500)
+      .json(new ApiResponse(500, null, "Failed to send OTP"));
   }
 });
 
