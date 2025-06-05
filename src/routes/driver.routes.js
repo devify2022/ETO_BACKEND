@@ -3,7 +3,6 @@ import {
   activateDriver,
   createDriver,
   deactivateDriver,
-  deleteDriver,
   getAllActiveDrivers,
   getAllDrivers,
   getCurrentRide,
@@ -41,7 +40,6 @@ router.route("/activate/:id").put(activateDriver);
 router.route("/deactivate/:id").put(deactivateDriver);
 router.route("/approve").patch(approveDriverByDriverId);
 router.route("/checkApprove/:userId").get(getApprovedStatus);
-router.route("/delete/:id").delete(deleteDriver);
 router.route("/").get(getAllDrivers);
 router.route("/rideDetails/:id").get(getDriverRideById);
 router.route("/topDrivers").get(getTopDrivers);

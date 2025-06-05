@@ -5,6 +5,7 @@ import {
   cancelRide,
   findAvailableDrivers,
   getAllActiveRides,
+  getRideHistory,
   getTotalDriversInCurrentRides,
   getTotalEarningsOfEndedRides,
   getTotalRides,
@@ -23,6 +24,7 @@ const createRouterWithSocket = (io) => {
   router.route("/totalEarnings").get(getTotalEarningsOfEndedRides);
   router.route("/all-driver/currentride").get(getTotalDriversInCurrentRides);
   router.route("/getTotalRides").get(getTotalRides);
+  router.route("/rideHistory").get(getRideHistory);
 
   router
     .route("/acceptRide")

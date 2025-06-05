@@ -10,9 +10,23 @@ import { User } from "../models/user.model.js";
 export const getAllRiders = asyncHandler(async (req, res) => {
   try {
     const riders = await Rider.find();
+
+    const ridersSummary = riders.map((rider) => ({
+      id: rider._id,
+      name: rider.name,
+      phone: rider.phone,
+      photo: rider.photo,
+      is_on_ride: rider.is_on_ride,
+      total_rides: rider.ride_details ? rider.ride_details.length : 0,
+      createdAt: rider.createdAt,
+      // Do not include ride_details array
+    }));
+
     return res
       .status(200)
-      .json(new ApiResponse(200, riders, "Riders retrieved successfully"));
+      .json(
+        new ApiResponse(200, ridersSummary, "Riders retrieved successfully")
+      );
   } catch (error) {
     console.error("Error retrieving riders:", error.message);
     return res
@@ -253,13 +267,7 @@ export const deleteRiderAccount = asyncHandler(async (req, res) => {
 
     return res
       .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          null,
-          "Account deleted successfully"
-        )
-      );
+      .json(new ApiResponse(200, null, "Account deleted successfully"));
   } catch (error) {
     console.error("Error deleting account:", error.message);
     return res

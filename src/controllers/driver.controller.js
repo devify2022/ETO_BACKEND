@@ -611,7 +611,7 @@ export const deactivateDriver = asyncHandler(async (req, res) => {
   }
 });
 
-// Delete Driver Function
+// Delete Driver and associated records
 export const deleteDriver = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -622,23 +622,39 @@ export const deleteDriver = asyncHandler(async (req, res) => {
   }
 
   try {
-    // Find and delete the driver by ID
-    const driver = await Driver.findByIdAndDelete(id);
-
+    // Step 1: Find the driver by ID
+    const driver = await Driver.findById(id);
     if (!driver) {
       return res
         .status(404)
         .json(new ApiResponse(404, null, "Driver not found"));
     }
 
+    // Step 2: Delete related Khata entries
+    await Khata.deleteMany({ driverId: driver._id });
+
+    // Step 3: Delete the associated User
+    await User.findByIdAndDelete(driver.userId);
+
+    // Step 4: Delete the Driver
+    await Driver.findByIdAndDelete(id);
+
     return res
       .status(200)
-      .json(new ApiResponse(200, null, "Driver deleted successfully"));
+      .json(
+        new ApiResponse(
+          200,
+          null,
+          "Driver and related data deleted successfully"
+        )
+      );
   } catch (error) {
-    console.error("Error deleting driver:", error.message);
+    console.error("Error deleting driver and related data:", error.message);
     return res
       .status(500)
-      .json(new ApiResponse(500, null, "Failed to delete driver"));
+      .json(
+        new ApiResponse(500, null, "Failed to delete driver and related data")
+      );
   }
 });
 
@@ -1263,12 +1279,10 @@ export const updateOneSignalPlayerId = asyncHandler(async (req, res) => {
   });
 
   if (!driverId || !oneSignalPlayerId) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Driver ID and OneSignal Player ID are required.",
-      });
+    return res.status(400).json({
+      success: false,
+      message: "Driver ID and OneSignal Player ID are required.",
+    });
   }
 
   try {
@@ -1284,20 +1298,16 @@ export const updateOneSignalPlayerId = asyncHandler(async (req, res) => {
         .json({ success: false, message: "Driver not found." });
     }
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "OneSignal Player ID updated successfully.",
-        driver,
-      });
+    return res.status(200).json({
+      success: true,
+      message: "OneSignal Player ID updated successfully.",
+      driver,
+    });
   } catch (error) {
     console.error("Error updating OneSignal Player ID:", error.message);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to update OneSignal Player ID.",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update OneSignal Player ID.",
+    });
   }
 });

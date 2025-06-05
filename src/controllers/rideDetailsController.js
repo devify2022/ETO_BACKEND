@@ -9,6 +9,7 @@ import dotenv from "dotenv";
 import { Admin } from "../models/admin.model.js";
 import { Khata } from "../models/khata.model.js";
 import ApiResponse from "../utils/apiResponse.js";
+import { ETOCard } from "../models/eto.model.js";
 
 dotenv.config({
   path: "./env",
@@ -711,6 +712,7 @@ export const updatePaymentMode = (io) =>
 
       // Update Ride Payment Mode
       ride.payment_mode = paymentMode;
+      ride.isPayment_done = true;
       await ride.save();
 
       // Update Driver's Wallets
@@ -981,6 +983,49 @@ export const getTotalRides = asyncHandler(async (req, res) => {
     console.error("Error fetching total rides:", error.message);
     return res.status(500).json({
       message: "Failed to fetch total rides.",
+    });
+  }
+});
+
+export const getRideHistory = asyncHandler(async (req, res) => {
+  try {
+    const rides = await RideDetails.find({
+      isPayment_done: true,
+      isRide_ended: true,
+    })
+      .populate({
+        path: "driverId",
+        select: "name phone driver_photo license_number",
+      })
+      .populate({
+        path: "riderId",
+        select: "name phone photo",
+      })
+      .lean();
+
+    // Map over rides to attach eto_id_num (from ETOCard)
+    const ridesWithETO = await Promise.all(
+      rides.map(async (ride) => {
+        const etoCard = await ETOCard.findOne({ driverId: ride.driverId?._id });
+        return {
+          ...ride,
+          driverId: {
+            ...ride.driverId,
+            eto_id_num: etoCard?.eto_id_num || null,
+          },
+        };
+      })
+    );
+
+    return res.status(200).json({
+      message: "Ride history fetched successfully",
+      total: ridesWithETO.length,
+      data: ridesWithETO,
+    });
+  } catch (error) {
+    console.error("Error fetching ride history:", error.message);
+    return res.status(500).json({
+      message: "Failed to fetch ride history",
     });
   }
 });
