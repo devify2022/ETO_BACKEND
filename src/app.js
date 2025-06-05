@@ -55,6 +55,8 @@ app.get("/", (req, res) => {
   res.send("Welcome To EASY Toto Operator (TRIAL) API!");
 });
 
+// check commit 
+
 app.get("/test", (req, res) => {
   res.send("Welcome to EASY (TRIAL) API!");
 });
