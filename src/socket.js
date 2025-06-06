@@ -86,6 +86,8 @@ export const setupSocketIO = (server) => {
       }
     });
 
+//test
+
     // New event: Update Driver Location
     socket.on("updateDriverLocation", async (data) => {
       const { driverId, lat, lng } = data;
