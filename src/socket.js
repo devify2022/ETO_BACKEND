@@ -8,8 +8,6 @@ import { PendingRideRequest } from "./models/pendingRequest.model.js";
 import sendDriverNotification from "./utils/onesignal.js";
 // import { getEstimatedTime } from "./utils/getlocation.js";
 
-
-
 export const setupSocketIO = (server) => {
   const io = new Server(server, {
     cors: {
@@ -53,8 +51,43 @@ export const setupSocketIO = (server) => {
       }
     });
 
-    // Register Driver Socket ID with location update and isActive check
+    // Register Driver Socket ID only
     socket.on("registerDriver", async (data) => {
+      const { driverId } = data;
+      if (!driverId) {
+        return socket.emit("error", {
+          message: "Driver ID is required",
+        });
+      }
+
+      try {
+        const driver = await Driver.findById(driverId);
+        if (!driver) {
+          return socket.emit("error", { message: "Driver not found" });
+        }
+
+        if (driver.isActive) {
+          // Only update socketId
+          await Driver.findByIdAndUpdate(driverId, {
+            socketId: socket.id,
+          });
+
+          console.log(`Driver ${driverId} connected with socket ${socket.id}`);
+        } else {
+          return socket.emit("error", {
+            message: "Driver is not active, cannot connect",
+          });
+        }
+      } catch (error) {
+        console.error("Error registering driver's socketId:", error.message);
+        socket.emit("error", {
+          message: "Failed to register driver",
+        });
+      }
+    });
+
+    // New event: Update Driver Location
+    socket.on("updateDriverLocation", async (data) => {
       const { driverId, lat, lng } = data;
       if (!driverId || !lat || !lng) {
         return socket.emit("error", {
@@ -69,40 +102,24 @@ export const setupSocketIO = (server) => {
         }
 
         if (driver.isActive) {
-          // Update driver's socketId and location
+          // Only update location
           await Driver.findByIdAndUpdate(driverId, {
-            socketId: socket.id,
             current_location: {
               type: "Point",
               coordinates: [lng, lat],
             },
           });
 
-          console.log(
-            `Driver ${driverId} connected with socket ${socket.id} and location updated`
-          );
-
-          // Deliver any pending ride requests that are not expired
-          const pendingRequests = await PendingRideRequest.find({
-            driverId: driverId,
-            expiresAt: { $gt: new Date() },
-          });
-          for (const req of pendingRequests) {
-            io.to(socket.id).emit("rideRequest", req.data);
-            await PendingRideRequest.findByIdAndDelete(req._id); // Remove after sending
-          }
+          console.log(`Driver ${driverId} location updated`);
         } else {
           return socket.emit("error", {
             message: "Driver is not active, cannot update location",
           });
         }
       } catch (error) {
-        console.error(
-          "Error updating driver's socketId or location:",
-          error.message
-        );
+        console.error("Error updating driver's location:", error.message);
         socket.emit("error", {
-          message: "Failed to register driver and update location",
+          message: "Failed to update driver location",
         });
       }
     });
