@@ -52,7 +52,7 @@ const ETOCardSchema = new Schema({
   },
   helpLine_num: {
     type: String,
-    default: "100",
+    default: "9830880062",
   },
 },
 { timestamps: true }
