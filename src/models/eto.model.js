@@ -34,9 +34,9 @@ const ETOCardSchema = new Schema({
     pin_code: {
       type: String,
     },
-    adhar_number: {
-      type: String,
-    },
+    // adhar_number: {
+    //   type: String,
+    // },
     driver_photo: {
       type: String,
     },

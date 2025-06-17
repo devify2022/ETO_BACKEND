@@ -92,10 +92,10 @@ const driverSchema = new Schema(
       type: String,
       required: [true, "Pin code is required"],
     },
-    aadhar_number: {
-      type: String,
-      required: [true, "Aadhar number is required"],
-    },
+    // aadhar_number: {
+    //   type: String,
+    //   required: [true, "Aadhar number is required"],
+    // },
     driver_photo: {
       type: String, // URL
     },
